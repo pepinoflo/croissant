@@ -8,7 +8,7 @@
   "summary": "The futur simple (je parlerai) for predictions, promises and distant plans, its irregular stems, and choosing between it and the futur proche.",
   "items": [
     { "id": "l09.v.lumiere", "type": "vocab", "group": "Les fêtes", "fr": "lumière", "en": "light", "pos": "noun", "gender": "f", "emoji": "💡", "example": { "fr": "les lumières de Noël", "en": "the Christmas lights" } },
-    { "id": "l09.v.noel", "type": "vocab", "group": "Les fêtes", "fr": "Noël", "en": "Christmas", "pos": "noun", "gender": "m", "article": "le", "emoji": "🎄", "note": "Usually without an article: à Noël = at Christmas." },
+    { "id": "l09.v.noel", "type": "vocab", "group": "Les fêtes", "fr": "Noël", "en": "Christmas", "pos": "expr", "emoji": "🎄", "note": "Used without an article: à Noël = at Christmas. Joyeux Noël !" },
     { "id": "l09.v.spectacle", "type": "vocab", "group": "Les fêtes", "fr": "spectacle", "en": "show", "pos": "noun", "gender": "m", "emoji": "🎪" },
     { "id": "l09.v.allumer", "type": "vocab", "group": "Les fêtes", "fr": "allumer", "en": "to turn on, to light", "pos": "verb", "enAlt": ["to switch on"] },
     { "id": "l09.p.tous-les-jours", "type": "phrase", "group": "Les fêtes", "fr": "tous les jours", "en": "every day" },

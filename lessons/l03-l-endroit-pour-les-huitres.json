@@ -61,7 +61,7 @@
     { "id": "l03.v.telephone", "type": "vocab", "group": "Décrire un objet", "fr": "téléphone", "en": "phone", "pos": "noun", "gender": "m", "emoji": "📱", "example": { "fr": "Tu peux envoyer des messages à tes amis.", "en": "You can send messages to your friends." } },
     { "id": "l03.p.envoyer-des-messages", "type": "phrase", "group": "Décrire un objet", "fr": "Tu peux envoyer des messages à tes amis.", "en": "You can send messages to your friends." },
     { "id": "l03.v.boite", "type": "vocab", "group": "Décrire un objet", "fr": "boîte", "en": "box", "pos": "noun", "gender": "f", "emoji": "📦", "enAlt": ["tin", "can"] },
-    { "id": "l03.v.contenant", "type": "vocab", "group": "Décrire un objet", "fr": "contenant", "en": "container", "pos": "noun", "gender": "m" },
+    { "id": "l03.v.contenant", "type": "vocab", "group": "Décrire un objet", "fr": "contenant", "en": "container", "pos": "noun", "gender": "m", "frAlt": ["récipient"], "note": "Also: un récipient." },
     { "id": "l03.v.gourde", "type": "vocab", "group": "Décrire un objet", "fr": "gourde", "en": "water bottle", "pos": "noun", "gender": "f", "image": "img/vocab/gourde.svg" },
     { "id": "l03.v.paille", "type": "vocab", "group": "Décrire un objet", "fr": "paille", "en": "straw", "pos": "noun", "gender": "f", "emoji": "🥤", "example": { "fr": "Ça a une paille.", "en": "It has a straw." } },
     { "id": "l03.v.marque", "type": "vocab", "group": "Décrire un objet", "fr": "marque", "en": "brand", "pos": "noun", "gender": "f", "example": { "fr": "Ça a une marque.", "en": "It has a brand." } },

@@ -4,7 +4,6 @@
 import type { Catalog } from '../content/catalog';
 import {
   clozeParts,
-  conjugationTitle,
   PRONOUN_LABEL,
   subjectFor,
   tokenize,

@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>Croissant</title>
+    <meta name="description" content="Five minutes of French a day, made from your own class notes." />
+    <meta name="theme-color" content="#F6EEDF" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#161A2B" media="(prefers-color-scheme: dark)" />
+    <meta name="color-scheme" content="light dark" />
+    <meta name="format-detection" content="telephone=no" />
+
+    <!-- Home-screen app on iPad and iPhone -->
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-title" content="Croissant" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <link rel="apple-touch-icon" href="./icons/apple-touch-icon.png" />
+    <link rel="icon" href="./favicon.svg" type="image/svg+xml" />
+    <!--splash-links-->
+
+    <style>
+      /* Shown instantly, before any script has loaded. */
+      html { background: #F6EEDF; }
+      @media (prefers-color-scheme: dark) { html { background: #161A2B; } }
+      #app:empty { position: fixed; inset: 0; display: grid; place-items: center; }
+      #app:empty::before { content: ""; width: 96px; height: 96px; background: url("./favicon.svg") center / contain no-repeat; }
+    </style>
+  </head>
+  <body>
+    <div id="app"></div>
+    <noscript>Croissant needs JavaScript to run.</noscript>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

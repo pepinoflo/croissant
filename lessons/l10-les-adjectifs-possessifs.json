@@ -69,7 +69,7 @@
     { "id": "l10.p.ma-mere-s-appelle", "type": "phrase", "group": "Parler de sa famille", "fr": "Ma mère s'appelle Anne.", "en": "My mother's name is Anne.", "note": "s'appeler = to be called" },
     { "id": "l10.p.a-la-retraite", "type": "phrase", "group": "Parler de sa famille", "fr": "Mes parents sont à la retraite.", "en": "My parents are retired.", "note": "à la retraite = retired" },
     { "id": "l10.v.comptable", "type": "vocab", "group": "Parler de sa famille", "fr": "comptable", "en": "accountant", "pos": "noun", "gender": "mf" },
-    { "id": "l10.v.compagnie-d-assurance", "type": "vocab", "group": "Parler de sa famille", "fr": "compagnie d'assurance", "en": "insurance company", "pos": "noun", "gender": "f" },
+    { "id": "l10.v.compagnie-d-assurance", "type": "vocab", "group": "Parler de sa famille", "fr": "compagnie d'assurance", "en": "insurance company", "pos": "noun", "gender": "f", "frAlt": ["compagnie d'assurances"] },
     { "id": "l10.v.chef-d-entreprise", "type": "vocab", "group": "Parler de sa famille", "fr": "chef d'entreprise", "en": "business owner", "pos": "noun", "gender": "m", "frAlt": ["entrepreneur"], "note": "Also: un entrepreneur." },
     { "id": "l10.v.gentillesse", "type": "vocab", "group": "Parler de sa famille", "fr": "gentillesse", "en": "kindness", "pos": "noun", "gender": "f", "article": "la" },
     { "id": "l10.v.patience", "type": "vocab", "group": "Parler de sa famille", "fr": "patience", "en": "patience", "pos": "noun", "gender": "f", "article": "la" },

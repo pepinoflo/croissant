@@ -16,7 +16,7 @@
     { "id": "l04.v.cuillere-en-bois", "type": "vocab", "group": "Les ustensiles", "fr": "cuillère en bois", "en": "wooden spoon", "pos": "noun", "gender": "f", "image": "img/vocab/cuillere-en-bois.svg", "note": "en bois = made of wood" },
     { "id": "l04.v.spatule", "type": "vocab", "group": "Les ustensiles", "fr": "spatule", "en": "spatula", "pos": "noun", "gender": "f", "image": "img/vocab/spatule.svg" },
     { "id": "l04.v.fourchette", "type": "vocab", "group": "Les ustensiles", "fr": "fourchette", "en": "fork", "pos": "noun", "gender": "f", "image": "img/vocab/fourchette.svg" },
-    { "id": "l04.v.couverts", "type": "vocab", "group": "Les ustensiles", "fr": "couverts", "en": "cutlery", "pos": "noun", "gender": "m", "plural": true, "article": "les", "emoji": "🍴", "note": "fourchette + couteau + cuillère = les couverts" },
+    { "id": "l04.v.couverts", "type": "vocab", "group": "Les ustensiles", "fr": "couverts", "en": "cutlery", "pos": "noun", "gender": "m", "plural": true, "article": "les", "note": "fourchette + couteau + cuillère = les couverts" },
     { "id": "l04.v.saladier", "type": "vocab", "group": "Les ustensiles", "fr": "saladier", "en": "salad bowl", "pos": "noun", "gender": "m", "image": "img/vocab/saladier.svg", "enAlt": ["mixing bowl"] },
     { "id": "l04.v.assiette", "type": "vocab", "group": "Les ustensiles", "fr": "assiette", "en": "plate", "pos": "noun", "gender": "f", "emoji": "🍽️", "note": "une assiette plate = a dinner plate" },
     { "id": "l04.v.bol", "type": "vocab", "group": "Les ustensiles", "fr": "bol", "en": "bowl", "pos": "noun", "gender": "m", "emoji": "🥣" },

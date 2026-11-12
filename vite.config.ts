@@ -1,6 +1,12 @@
 import { defineConfig } from 'vitest/config';
 import preact from '@preact/preset-vite';
 import { VitePWA } from 'vite-plugin-pwa';
+import { splashEntries } from './scripts/splash-devices.mjs';
+
+/** iOS launch images: one <link> per device size and orientation. */
+const splashLinks = splashEntries()
+  .map((s: { file: string; media: string }) => `<link rel="apple-touch-startup-image" href="./${s.file}" media="${s.media}" />`)
+  .join('\n    ');
 
 // Relative base so the same build works at https://<user>.github.io/<repo>/ and locally.
 export default defineConfig({
@@ -10,9 +16,12 @@ export default defineConfig({
   },
   plugins: [
     preact(),
+    {
+      name: 'croissant-splash-links',
+      transformIndexHtml: (html) => html.replace('<!--splash-links-->', splashLinks),
+    },
     VitePWA({
       registerType: 'prompt',
-      injectRegister: false,
       includeAssets: ['favicon.svg', 'icons/*.png', 'img/**/*.svg'],
       manifest: {
         name: 'Croissant — French review',

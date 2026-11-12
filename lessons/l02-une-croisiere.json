@@ -26,7 +26,7 @@
     { "id": "l02.v.prendre-une-douche", "type": "vocab", "group": "Le matin", "fr": "prendre une douche", "en": "to take a shower", "pos": "verb", "emoji": "🚿" },
     { "id": "l02.v.s-habiller", "type": "vocab", "group": "Le matin", "fr": "s'habiller", "en": "to get dressed", "pos": "verb" },
     { "id": "l02.v.prendre-un-cafe", "type": "vocab", "group": "Le matin", "fr": "prendre un café", "en": "to have a coffee", "pos": "verb", "emoji": "☕" },
-    { "id": "l02.v.prendre-le-petit-dejeuner", "type": "vocab", "group": "Le matin", "fr": "prendre le petit déjeuner", "en": "to have breakfast", "pos": "verb", "emoji": "🥐" },
+    { "id": "l02.v.prendre-le-petit-dejeuner", "type": "vocab", "group": "Le matin", "fr": "prendre le petit déjeuner", "en": "to have breakfast", "pos": "verb", "frAlt": ["prendre le petit-déjeuner"], "emoji": "🥐" },
     { "id": "l02.v.partir-au-travail", "type": "vocab", "group": "Le matin", "fr": "partir au travail", "en": "to leave for work", "pos": "verb" },
 
     { "id": "l02.v.travailler", "type": "vocab", "group": "Dans la journée", "fr": "travailler", "en": "to work", "pos": "verb", "emoji": "💼" },
