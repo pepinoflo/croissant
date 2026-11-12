@@ -1,0 +1,173 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://croissant.app/schema/lesson.v1.schema.json",
+  "title": "Croissant lesson, schema version 1",
+  "description": "One file per class. Item ids are permanent: progress on the iPad is stored against them, so an id must never be renamed, reused or removed once published (see lessons/ids.lock.json).",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "id", "order", "title", "titleEn", "emoji", "summary", "items"],
+  "properties": {
+    "schema": { "const": 1, "description": "Version of this file format." },
+    "id": {
+      "type": "string",
+      "pattern": "^l[0-9]{2}-[a-z0-9]+(-[a-z0-9]+)*$",
+      "description": "Lesson id and file name (without .json), e.g. l05-les-magasins."
+    },
+    "order": { "type": "integer", "minimum": 1, "description": "Position in the course; must match the number in the id." },
+    "title": { "type": "string", "minLength": 1, "description": "Title in French." },
+    "titleEn": { "type": "string", "minLength": 1, "description": "What the lesson covers, in English." },
+    "emoji": { "type": "string", "minLength": 1 },
+    "summary": { "type": "string", "minLength": 1, "description": "One or two sentences in English." },
+    "date": { "type": "string", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$", "description": "Date of the class, if known." },
+    "items": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "oneOf": [
+          { "$ref": "#/definitions/vocab" },
+          { "$ref": "#/definitions/phrase" },
+          { "$ref": "#/definitions/conjugation" },
+          { "$ref": "#/definitions/cloze" },
+          { "$ref": "#/definitions/grammar" }
+        ]
+      }
+    }
+  },
+  "definitions": {
+    "id": {
+      "type": "string",
+      "pattern": "^l[0-9]{2}\\.[vpcxg]\\.[a-z0-9]+(-[a-z0-9]+)*$",
+      "description": "l<lesson number>.<v|p|c|x|g>.<slug> — v vocab, p phrase, c conjugation, x cloze (exercise), g grammar."
+    },
+    "text": { "type": "string", "minLength": 1 },
+    "textList": { "type": "array", "minItems": 1, "uniqueItems": true, "items": { "$ref": "#/definitions/text" } },
+    "example": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["fr", "en"],
+      "properties": { "fr": { "$ref": "#/definitions/text" }, "en": { "$ref": "#/definitions/text" } }
+    },
+    "vocab": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "type", "fr", "en", "pos"],
+      "properties": {
+        "id": { "$ref": "#/definitions/id" },
+        "type": { "const": "vocab" },
+        "fr": { "$ref": "#/definitions/text", "description": "The word WITHOUT an article; infinitive for verbs." },
+        "en": { "$ref": "#/definitions/text" },
+        "pos": { "enum": ["noun", "verb", "adj", "adv", "expr"] },
+        "gender": { "enum": ["m", "f", "mf"], "description": "Required for nouns. mf = same form for both (un/une comptable)." },
+        "plural": { "type": "boolean", "description": "True for nouns normally used in the plural (les pâtes)." },
+        "article": {
+          "enum": ["un", "une", "le", "la", "l'", "les", "des", "du", "de la", "de l'"],
+          "description": "Article shown with the noun when un/une (or des for plurals) is not the natural choice."
+        },
+        "emoji": { "$ref": "#/definitions/text", "description": "Picture for concrete words. Must clearly show the thing." },
+        "image": { "type": "string", "pattern": "^img/vocab/[a-z0-9-]+\\.svg$", "description": "Custom picture under public/, when no emoji fits." },
+        "frAlt": { "$ref": "#/definitions/textList", "description": "Other French answers accepted when typing." },
+        "enAlt": { "$ref": "#/definitions/textList", "description": "Other English meanings; keeps synonyms out of multiple-choice options." },
+        "example": { "$ref": "#/definitions/example" },
+        "group": { "$ref": "#/definitions/text" },
+        "note": { "$ref": "#/definitions/text" }
+      },
+      "if": { "properties": { "pos": { "const": "noun" } } },
+      "then": { "required": ["gender"] }
+    },
+    "phrase": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "type", "fr", "en"],
+      "properties": {
+        "id": { "$ref": "#/definitions/id" },
+        "type": { "const": "phrase" },
+        "fr": { "$ref": "#/definitions/text" },
+        "en": { "$ref": "#/definitions/text" },
+        "register": { "enum": ["informal", "neutral", "formal"] },
+        "frAlt": { "$ref": "#/definitions/textList" },
+        "enAlt": { "$ref": "#/definitions/textList" },
+        "scramble": { "type": "boolean", "description": "false keeps the phrase out of the word-tile exercise." },
+        "group": { "$ref": "#/definitions/text" },
+        "note": { "$ref": "#/definitions/text" }
+      }
+    },
+    "conjugation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "type", "verb", "en", "tense", "forms"],
+      "properties": {
+        "id": { "$ref": "#/definitions/id" },
+        "type": { "const": "conjugation" },
+        "verb": { "$ref": "#/definitions/text", "description": "Infinitive." },
+        "en": { "$ref": "#/definitions/text" },
+        "tense": { "enum": ["présent", "futur proche", "futur simple", "passé composé", "imparfait", "conditionnel", "impératif", "subjonctif"] },
+        "forms": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["je", "tu", "il", "nous", "vous", "ils"],
+          "description": "Verb forms WITHOUT the subject pronoun (reflexive pronouns stay: \"me couche\").",
+          "properties": {
+            "je": { "$ref": "#/definitions/text" },
+            "tu": { "$ref": "#/definitions/text" },
+            "il": { "$ref": "#/definitions/text" },
+            "nous": { "$ref": "#/definitions/text" },
+            "vous": { "$ref": "#/definitions/text" },
+            "ils": { "$ref": "#/definitions/text" }
+          }
+        },
+        "grammar": { "$ref": "#/definitions/id", "description": "Grammar card to show as a reminder the first time." },
+        "group": { "$ref": "#/definitions/text" },
+        "note": { "$ref": "#/definitions/text" }
+      }
+    },
+    "cloze": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "type", "fr", "en", "distractors"],
+      "properties": {
+        "id": { "$ref": "#/definitions/id" },
+        "type": { "const": "cloze" },
+        "fr": { "type": "string", "pattern": "^[^{}]*\\{\\{[^{}]+\\}\\}[^{}]*$", "description": "Sentence with exactly one {{answer}}." },
+        "en": { "$ref": "#/definitions/text", "description": "Translation of the complete sentence." },
+        "hint": { "$ref": "#/definitions/text", "description": "Shown beside the blank, usually the infinitive." },
+        "accept": { "$ref": "#/definitions/textList", "description": "Other correct answers." },
+        "distractors": {
+          "type": "array",
+          "minItems": 2,
+          "uniqueItems": true,
+          "items": { "$ref": "#/definitions/text" },
+          "description": "Clearly wrong options for the multiple-choice version."
+        },
+        "choiceOnly": { "type": "boolean", "description": "Never ask for the answer to be typed." },
+        "explain": { "$ref": "#/definitions/text", "description": "Shown with the answer." },
+        "grammar": { "$ref": "#/definitions/id" },
+        "group": { "$ref": "#/definitions/text" },
+        "note": { "$ref": "#/definitions/text" }
+      }
+    },
+    "grammar": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "type", "title", "body"],
+      "properties": {
+        "id": { "$ref": "#/definitions/id" },
+        "type": { "const": "grammar" },
+        "title": { "$ref": "#/definitions/text" },
+        "titleEn": { "$ref": "#/definitions/text" },
+        "body": { "$ref": "#/definitions/text", "description": "Explanation in English. Blank lines separate paragraphs; **bold** is supported." },
+        "table": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["headers", "rows"],
+          "properties": {
+            "headers": { "type": "array", "minItems": 2, "items": { "type": "string" } },
+            "rows": { "type": "array", "minItems": 1, "items": { "type": "array", "minItems": 2, "items": { "type": "string" } } }
+          }
+        },
+        "examples": { "type": "array", "minItems": 1, "items": { "$ref": "#/definitions/example" } },
+        "group": { "$ref": "#/definitions/text" },
+        "note": { "$ref": "#/definitions/text" }
+      }
+    }
+  }
+}

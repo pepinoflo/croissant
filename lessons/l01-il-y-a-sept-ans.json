@@ -1,0 +1,64 @@
+{
+  "schema": 1,
+  "id": "l01-il-y-a-sept-ans",
+  "order": 1,
+  "title": "Il y a sept ans",
+  "titleEn": "Talking about the past: where you lived, what you did",
+  "emoji": "🧭",
+  "summary": "Saying how long ago something happened, where you used to live, and answering questions about a day out.",
+  "items": [
+    { "id": "l01.g.il-y-a-depuis", "type": "grammar", "title": "Il y a / depuis", "titleEn": "\"ago\" and \"for / since\"",
+      "body": "**il y a** + a length of time = **ago**. The event is finished.\n\n**depuis** + a length of time = **for / since**. It started in the past and is still true now, so French uses the present tense.",
+      "examples": [
+        { "fr": "Il y a sept ans, on a déménagé.", "en": "Seven years ago, we moved." },
+        { "fr": "J'habite ici depuis deux ans.", "en": "I have lived here for two years." }
+      ] },
+
+    { "id": "l01.p.il-y-a-sept-ans", "type": "phrase", "group": "Le passé", "fr": "il y a sept ans", "en": "seven years ago", "note": "il y a + time = ago. On its own, \"il y a\" means \"there is / there are\"." },
+    { "id": "l01.v.demenager", "type": "vocab", "group": "Le passé", "fr": "déménager", "en": "to move house", "pos": "verb", "enAlt": ["to move"] },
+    { "id": "l01.p.on-habitait", "type": "phrase", "group": "Le passé", "fr": "Il y a dix ans, on habitait dans un autre pays.", "en": "Ten years ago, we lived in another country." },
+    { "id": "l01.p.on-est-venus", "type": "phrase", "group": "Le passé", "fr": "Il y a deux ans, on est venus vivre ici.", "en": "Two years ago, we came to live here.", "frAlt": ["Il y a deux ans, on est venu vivre ici."] },
+    { "id": "l01.v.retourner", "type": "vocab", "group": "Le passé", "fr": "retourner", "en": "to go back", "pos": "verb", "enAlt": ["to return"] },
+    { "id": "l01.v.revenir", "type": "vocab", "group": "Le passé", "fr": "revenir", "en": "to come back", "pos": "verb", "note": "Past participle: revenu — \"Je suis revenue hier.\"" },
+    { "id": "l01.p.on-aimerait", "type": "phrase", "group": "Le passé", "fr": "On aimerait revenir.", "en": "We would like to come back.", "note": "on aimerait = we would like" },
+    { "id": "l01.v.depuis", "type": "vocab", "group": "Le passé", "fr": "depuis", "en": "since, for (a length of time)", "pos": "adv", "example": { "fr": "J'habite ici depuis deux ans.", "en": "I have lived here for two years." } },
+    { "id": "l01.x.il-y-a", "type": "cloze", "group": "Le passé", "fr": "{{Il y a}} sept ans, on a déménagé.", "en": "Seven years ago, we moved.", "distractors": ["Depuis", "Pendant", "Dans"], "grammar": "l01.g.il-y-a-depuis", "explain": "il y a + time = ago (a finished event)." },
+    { "id": "l01.x.depuis", "type": "cloze", "group": "Le passé", "fr": "J'habite ici {{depuis}} deux ans.", "en": "I have lived here for two years.", "distractors": ["il y a", "par", "en"], "grammar": "l01.g.il-y-a-depuis", "explain": "depuis + time = for (and it is still true)." },
+
+    { "id": "l01.p.trop-loin", "type": "phrase", "group": "La famille et la distance", "fr": "Je vis trop loin de ma famille.", "en": "I live too far from my family." },
+    { "id": "l01.p.une-fois-par-an", "type": "phrase", "group": "La famille et la distance", "fr": "une fois ou deux fois par an", "en": "once or twice a year" },
+    { "id": "l01.x.par-an", "type": "cloze", "group": "La famille et la distance", "fr": "Je vois ma famille deux fois {{par}} an.", "en": "I see my family twice a year.", "distractors": ["pour", "dans", "de"], "explain": "par = per: une fois par an, deux fois par semaine." },
+    { "id": "l01.p.pas-suffisant", "type": "phrase", "group": "La famille et la distance", "fr": "Ce n'est pas suffisant.", "en": "It's not enough.", "frAlt": ["C'est pas suffisant."], "note": "In speech the \"ne\" is often dropped: \"C'est pas suffisant.\"" },
+    { "id": "l01.v.quatorze", "type": "vocab", "group": "La famille et la distance", "fr": "quatorze", "en": "fourteen", "pos": "adj" },
+    { "id": "l01.p.meme-universite", "type": "phrase", "group": "La famille et la distance", "fr": "Nous avons étudié dans la même université.", "en": "We studied at the same university." },
+
+    { "id": "l01.p.a-l-est", "type": "phrase", "group": "Décrire un pays", "fr": "à l'est", "en": "in the east", "scramble": false },
+    { "id": "l01.p.au-milieu", "type": "phrase", "group": "Décrire un pays", "fr": "au milieu", "en": "in the middle", "scramble": false },
+    { "id": "l01.v.ile", "type": "vocab", "group": "Décrire un pays", "fr": "île", "en": "island", "pos": "noun", "gender": "f", "emoji": "🏝️" },
+    { "id": "l01.v.route", "type": "vocab", "group": "Décrire un pays", "fr": "route", "en": "road", "pos": "noun", "gender": "f", "emoji": "🛣️" },
+    { "id": "l01.v.biere", "type": "vocab", "group": "Décrire un pays", "fr": "bière", "en": "beer", "pos": "noun", "gender": "f", "emoji": "🍺" },
+    { "id": "l01.v.gens", "type": "vocab", "group": "Décrire un pays", "fr": "gens", "en": "people", "pos": "noun", "gender": "m", "plural": true, "article": "les", "note": "Always plural: les gens sont gentils." },
+    { "id": "l01.v.monde", "type": "vocab", "group": "Décrire un pays", "fr": "monde", "en": "world", "pos": "noun", "gender": "m", "article": "le", "emoji": "🌍", "note": "Also \"people\": il y a beaucoup de monde = it's crowded; tout le monde = everyone." },
+    { "id": "l01.p.il-pleut", "type": "phrase", "group": "Décrire un pays", "fr": "Il pleut trop souvent.", "en": "It rains too often." },
+    { "id": "l01.v.temperature", "type": "vocab", "group": "Décrire un pays", "fr": "température", "en": "temperature", "pos": "noun", "gender": "f", "emoji": "🌡️" },
+    { "id": "l01.v.essayer", "type": "vocab", "group": "Décrire un pays", "fr": "essayer", "en": "to try", "pos": "verb" },
+
+    { "id": "l01.v.brun", "type": "vocab", "group": "Décrire quelqu'un", "fr": "brun", "en": "brown, dark (hair)", "pos": "adj", "note": "Feminine: brune." },
+    { "id": "l01.v.fin", "type": "vocab", "group": "Décrire quelqu'un", "fr": "fin", "en": "thin, fine", "pos": "adj", "note": "Feminine: fine." },
+    { "id": "l01.v.melange", "type": "vocab", "group": "Décrire quelqu'un", "fr": "mélange", "en": "mix", "pos": "noun", "gender": "m", "enAlt": ["mixture"], "example": { "fr": "C'est un mélange de brun et de jaune.", "en": "It's a mix of brown and yellow." } },
+    { "id": "l01.v.drole", "type": "vocab", "group": "Décrire quelqu'un", "fr": "drôle", "en": "funny", "pos": "adj" },
+
+    { "id": "l01.p.ou-suis-je-allee", "type": "phrase", "group": "Raconter une journée", "fr": "Où suis-je allée ?", "en": "Where did I go?", "register": "formal", "note": "allée takes an extra e because the speaker is a woman." },
+    { "id": "l01.p.petite-ville", "type": "phrase", "group": "Raconter une journée", "fr": "dans une petite ville", "en": "in a small town" },
+    { "id": "l01.p.qu-avons-nous-fait", "type": "phrase", "group": "Raconter une journée", "fr": "Qu'est-ce que nous avons fait ?", "en": "What did we do?" },
+    { "id": "l01.p.mange-au-restaurant", "type": "phrase", "group": "Raconter une journée", "fr": "Nous avons mangé au restaurant.", "en": "We ate at a restaurant." },
+    { "id": "l01.p.visite-exposition", "type": "phrase", "group": "Raconter une journée", "fr": "Nous avons visité une exposition.", "en": "We visited an exhibition." },
+    { "id": "l01.p.quel-temps-faisait-il", "type": "phrase", "group": "Raconter une journée", "fr": "Quel temps faisait-il ?", "en": "What was the weather like?" },
+    { "id": "l01.p.il-faisait-beau", "type": "phrase", "group": "Raconter une journée", "fr": "Il faisait beau.", "en": "The weather was nice." },
+    { "id": "l01.p.passe-la-journee", "type": "phrase", "group": "Raconter une journée", "fr": "Nous avons passé la journée dehors.", "en": "We spent the day outside." },
+    { "id": "l01.v.dehors", "type": "vocab", "group": "Raconter une journée", "fr": "dehors", "en": "outside", "pos": "adv", "frAlt": ["à l'extérieur"], "enAlt": ["outdoors"], "note": "Opposite: dedans." },
+    { "id": "l01.v.dedans", "type": "vocab", "group": "Raconter une journée", "fr": "dedans", "en": "inside", "pos": "adv", "frAlt": ["à l'intérieur"], "enAlt": ["indoors"], "note": "Opposite: dehors." },
+    { "id": "l01.p.a-l-interieur", "type": "phrase", "group": "Raconter une journée", "fr": "à l'intérieur", "en": "indoors", "frAlt": ["dedans"], "enAlt": ["inside"], "scramble": false, "note": "Opposite: à l'extérieur." },
+    { "id": "l01.p.a-l-exterieur", "type": "phrase", "group": "Raconter une journée", "fr": "à l'extérieur", "en": "outdoors", "frAlt": ["dehors"], "enAlt": ["outside"], "scramble": false, "note": "Opposite: à l'intérieur." }
+  ]
+}

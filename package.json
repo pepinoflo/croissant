@@ -1,0 +1,35 @@
+{
+  "name": "croissant",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "description": "A daily French review game built from weekly class notes.",
+  "scripts": {
+    "dev": "vite --host",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview --host",
+    "test": "vitest run",
+    "validate": "node scripts/validate-lessons.mjs",
+    "lessons:lock": "node scripts/validate-lessons.mjs --lock",
+    "icons": "node scripts/make-icons.mjs",
+    "check": "npm run validate && npm test && npm run build"
+  },
+  "dependencies": {
+    "@fontsource-variable/fraunces": "^5.3.0",
+    "@preact/signals": "^2.11.4",
+    "idb": "^8.0.4",
+    "preact": "^11.2.0",
+    "ts-fsrs": "^5.4.2"
+  },
+  "devDependencies": {
+    "@preact/preset-vite": "^2.10.6",
+    "ajv": "^8.20.0",
+    "fake-indexeddb": "^6.2.8",
+    "sharp": "^0.35.5",
+    "typescript": "^7.0.2",
+    "vite": "^8.3.8",
+    "vite-plugin-pwa": "^2.0.0",
+    "vitest": "^5.1.0",
+    "workbox-window": "^7.4.1"
+  }
+}

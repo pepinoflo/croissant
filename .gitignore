@@ -1,0 +1,11 @@
+node_modules/
+dist/
+dev-dist/
+*.log
+.DS_Store
+
+# Raw class notes are personal: they stay on this computer and are never committed.
+lessons/inbox/*
+lessons/archive/*
+!lessons/inbox/.gitkeep
+!lessons/archive/.gitkeep
