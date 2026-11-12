@@ -19,11 +19,11 @@ import { catalog } from '../content/load';
 import type { PhraseItem, StudyItem, VocabItem } from '../content/types';
 import { generateExercise, generateMatch } from '../exercises/generate';
 import type { Exercise, QuizExercise } from '../exercises/types';
-import { levelInfo, xpForAnswer } from '../game/xp';
+import { KNOWN_XP, levelInfo, xpForAnswer } from '../game/xp';
 import { sfx } from '../speech/sfx';
 import { canSpeak, speak, stopSpeaking } from '../speech/tts';
 import { gradeFor } from '../srs/grading';
-import { planSession, withRetry, type Step } from '../srs/session';
+import { nextUnseen, planSession, withNewItem, withoutQuiz, withRetry, type Step } from '../srs/session';
 import {
   cards,
   completeSession,
@@ -226,7 +226,8 @@ export function Session({ focusLessonId, onAgain }: { focusLessonId?: string; on
   const [combo, setCombo] = useState(0);
   const [outcome, setOutcome] = useState<SessionOutcome | null>(null);
   const [leaving, setLeaving] = useState(false);
-  const built = useRef(new Map<number, Exercise>());
+  const built = useRef(new Map<string, Exercise>());
+  const replaced = useRef(0);
   const shownAt = useRef(Date.now());
   const stats = useRef({
     xp: 0,
@@ -244,7 +245,9 @@ export function Session({ focusLessonId, onAgain }: { focusLessonId?: string; on
 
   const exercise = useMemo<Exercise | null>(() => {
     if (!step || (step.kind !== 'quiz' && step.kind !== 'match')) return null;
-    const cached = built.current.get(index);
+    // Keyed by step, not position: steps can be added or removed ahead.
+    const key = `${step.kind}:${step.itemId}:${step.retry ? 'r' : ''}`;
+    const cached = built.current.get(key);
     if (cached) return cached;
     let ex: Exercise;
     if (step.kind === 'match') {
@@ -258,7 +261,7 @@ export function Session({ focusLessonId, onAgain }: { focusLessonId?: string; on
         { easier: step.retry },
       );
     }
-    built.current.set(index, ex);
+    built.current.set(key, ex);
     return ex;
   }, [index, step]);
 
@@ -302,6 +305,9 @@ export function Session({ focusLessonId, onAgain }: { focusLessonId?: string; on
         production: ex.production,
         elapsedMs: Date.now() - shownAt.current,
         answerWords: ex.kind === 'type' ? ex.answerWords : ex.kind === 'unscramble' ? ex.tiles.length : 1,
+        // Fill-in sentences are asked without an introduction: getting one
+        // right at once the very first time means it was already known.
+        firstSight: step.isNew && !step.retry && catalog.items.get(ex.itemId)?.type === 'cloze',
       });
     const xp = graded ? xpForAnswer(ex.xpKind, o.verdict, combo) : 0;
     recordAnswers([{ itemId: ex.itemId, grade, xp, variant: ex.variant, graded }]);
@@ -328,6 +334,27 @@ export function Session({ focusLessonId, onAgain }: { focusLessonId?: string; on
     }
     setFeedback({ outcome: o, ex, xp, praise: PRAISE[Math.floor(Math.random() * PRAISE.length)] });
     if (settings.peek().autoSpeak) speak(ex.answer.fr);
+  };
+
+  /** "I already know this" on a new item: schedule it far ahead, skip its question, offer another. */
+  const alreadyKnown = () => {
+    if (!step || step.kind !== 'intro') return;
+    recordAnswers([{ itemId: step.itemId, grade: 'easy', xp: KNOWN_XP, variant: 'known', graded: true, silent: true }]);
+    stats.current.xp += KNOWN_XP;
+    let nextSteps = withoutQuiz(steps, index, step.itemId);
+    if (replaced.current < plan.newCount) {
+      const planned = new Set(nextSteps.flatMap((s) => s.itemIds ?? [s.itemId]));
+      const lessonId = catalog.lessonOf.get(step.itemId)?.id;
+      const item = nextUnseen(catalog, cards.peek(), planned, lessonId, focusLessonId);
+      if (item) {
+        nextSteps = withNewItem(nextSteps, index, item);
+        replaced.current++;
+      }
+    }
+    setSteps(nextSteps);
+    live.current = { steps: nextSteps, index };
+    sfx.tap();
+    next();
   };
 
   const matchDone = (results: MatchResult[]) => {
@@ -427,6 +454,11 @@ export function Session({ focusLessonId, onAgain }: { focusLessonId?: string; on
 
       {isCard && (
         <footer class="session-foot">
+          {step.kind === 'intro' && (
+            <Button kind="secondary" onClick={alreadyKnown}>
+              Je connais déjà
+            </Button>
+          )}
           <Button
             wide
             onClick={() => {
@@ -434,7 +466,7 @@ export function Session({ focusLessonId, onAgain }: { focusLessonId?: string; on
               next();
             }}
           >
-            {step.kind === 'grammar' ? 'Compris !' : 'Continuer'}
+            {step.kind === 'grammar' ? 'Compris !' : 'À apprendre'}
           </Button>
         </footer>
       )}

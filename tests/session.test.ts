@@ -7,6 +7,9 @@ import { newCard, review, type CardState } from '../src/srs/scheduler';
 import {
   countItems,
   newAllowance,
+  nextUnseen,
+  withNewItem,
+  withoutQuiz,
   pickNew,
   planSession,
   withRetry,
@@ -34,9 +37,10 @@ const quizIds = (steps: Step[]) => steps.filter((s) => s.kind === 'quiz').map((s
 
 describe('newAllowance', () => {
   it('introduces more new items when there is little to review', () => {
-    expect(newAllowance('normal', 0, null)).toBeGreaterThan(SIZES.normal.fresh);
-    expect(newAllowance('normal', 0, null)).toBeLessThanOrEqual(SIZES.normal.fresh * 2);
-    expect(newAllowance('normal', SIZES.normal.reviews, null)).toBe(SIZES.normal.fresh);
+    expect(newAllowance('normal', 0, null)).toBe(SIZES.normal.fresh * 2);
+    expect(newAllowance('normal', 10, null)).toBe(SIZES.normal.questions - 10);
+    // A full load of reviews still leaves room for a few new items.
+    expect(newAllowance('normal', SIZES.normal.reviews, null)).toBe(SIZES.normal.questions - SIZES.normal.reviews);
   });
   it('stops introducing new items when reviews have piled up', () => {
     expect(newAllowance('normal', SIZES.normal.reviews * 2 + 1, null)).toBe(0);
@@ -158,6 +162,90 @@ describe('planSession', () => {
 
   it('is repeatable for the same inputs', () => {
     expect(plan(new Map(), { rng: seeded(3) })).toEqual(plan(new Map(), { rng: seeded(3) }));
+  });
+});
+
+describe('a month of daily sessions', () => {
+  it('stays a few minutes a day and keeps moving through the lessons', () => {
+    const rng = seeded(42);
+    const cards = new Map<string, CardState>();
+    const recent: number[] = [];
+    const sizes: number[] = [];
+    let now = NOW;
+    for (let day = 0; day < 30; day++) {
+      const accuracy = recent.length < 10 ? null : recent.reduce((a, b) => a + b, 0) / recent.length;
+      const p = planSession({ catalog, cards, now, size: 'normal', recentAccuracy: accuracy, rng });
+      // Half of the new words are already known from class: she says so on the
+      // introduction card, and each one is replaced by another new item.
+      let steps = p.steps;
+      let replaced = 0;
+      for (let i = 0; i < steps.length; i++) {
+        const s = steps[i];
+        if (s.kind === 'intro' && rng() < 0.5) {
+          cards.set(s.itemId, review(newCard(s.itemId, now), 'easy', now));
+          steps = withoutQuiz(steps, i, s.itemId);
+          if (replaced < p.newCount) {
+            const planned = new Set(steps.flatMap((x) => x.itemIds ?? [x.itemId]));
+            const item = nextUnseen(catalog, cards, planned, catalog.lessonOf.get(s.itemId)!.id);
+            if (item) {
+              steps = withNewItem(steps, i, item);
+              replaced++;
+            }
+          }
+          continue;
+        }
+        if (s.kind !== 'quiz' && s.kind !== 'match') continue;
+        for (const id of s.itemIds ?? [s.itemId]) {
+          // A learner who is right about 85% of the time.
+          const right = rng() < 0.85;
+          cards.set(id, review(cards.get(id) ?? newCard(id, now), right ? 'good' : 'again', now));
+          recent.push(right ? 1 : 0);
+          if (recent.length > 50) recent.shift();
+        }
+      }
+      sizes.push(steps.filter((s) => s.kind === 'quiz' || s.kind === 'match').length);
+      now += DAY_MS;
+    }
+    // Never an empty session, never an overwhelming one.
+    expect(Math.min(...sizes)).toBeGreaterThan(5);
+    expect(Math.max(...sizes)).toBeLessThanOrEqual(SIZES.normal.reviews + SIZES.normal.fresh * 2 + 2);
+    // After a month a good share of the ten lessons has been met…
+    expect(cards.size).toBeGreaterThan(200);
+    // …and the reviews waiting on day 31 still fit comfortably in a session or two.
+    expect(countItems(catalog, cards, now).due).toBeLessThan(SIZES.normal.reviews * 3);
+  });
+});
+
+describe('skipping a new item as already known', () => {
+  const first = plan(new Map());
+  const introIndex = first.steps.findIndex((s) => s.kind === 'intro');
+  const skipped = first.steps[introIndex];
+
+  it('removes the question that was planned for it', () => {
+    const steps = withoutQuiz(first.steps, introIndex, skipped.itemId);
+    expect(steps.filter((s) => s.kind === 'quiz' && s.itemId === skipped.itemId)).toEqual([]);
+    expect(steps.length).toBe(first.steps.length - 1);
+  });
+
+  it('offers another unseen item from the same lesson that is not already in the session', () => {
+    const planned = new Set(first.steps.map((s) => s.itemId));
+    const lessonId = catalog.lessonOf.get(skipped.itemId)!.id;
+    const item = nextUnseen(catalog, new Map(), planned, lessonId)!;
+    expect(planned.has(item.id)).toBe(false);
+    expect(catalog.lessonOf.get(item.id)!.id).toBe(lessonId);
+  });
+
+  it('introduces the new item next and asks about it a few steps later', () => {
+    const planned = new Set(first.steps.map((s) => s.itemId));
+    const item = catalog.study.find((i) => !planned.has(i.id) && i.type === 'vocab')!;
+    const steps = withNewItem(first.steps, introIndex, item);
+    expect(steps[introIndex + 1]).toMatchObject({ kind: 'intro', itemId: item.id });
+    const quiz = steps.findIndex((s) => s.kind === 'quiz' && s.itemId === item.id);
+    expect(quiz).toBeGreaterThan(introIndex + 2);
+  });
+
+  it('has nothing to offer once everything has been met', () => {
+    expect(nextUnseen(catalog, learned(catalog.study, NOW), new Set())).toBeNull();
   });
 });
 

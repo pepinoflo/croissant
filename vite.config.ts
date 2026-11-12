@@ -11,6 +11,10 @@ const splashLinks = splashEntries()
 // Relative base so the same build works at https://<user>.github.io/<repo>/ and locally.
 export default defineConfig({
   base: './',
+  build: {
+    // iPads that can no longer be updated should still run the app.
+    target: ['es2020', 'safari14'],
+  },
   define: {
     __BUILD_TIME__: JSON.stringify(new Date().toISOString()),
   },

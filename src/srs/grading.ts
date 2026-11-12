@@ -140,16 +140,23 @@ export interface GradeContext {
   elapsedMs: number;
   /** Number of words in the answer, used to judge what "quick" means. */
   answerWords?: number;
+  /**
+   * True when the item has never been shown before, not even introduced.
+   * A quick right answer then means it was already known from class.
+   */
+  firstSight?: boolean;
 }
 
 /**
  * Turns the outcome of an exercise into an FSRS grade.
  * wrong → again; accepted with a correction → hard; right → good;
- * right, from memory and without hesitation → easy.
+ * right, from memory and without hesitation → easy;
+ * right straight away on something never shown before → easy (already known).
  */
 export function gradeFor(verdict: Verdict, ctx: GradeContext): Grade {
   if (verdict === 'wrong') return 'again';
   if (verdict !== 'exact') return 'hard';
+  if (ctx.firstSight && ctx.elapsedMs <= 8000) return 'easy';
   if (ctx.production) {
     const quick = 5000 + 2500 * Math.max(0, (ctx.answerWords ?? 1) - 1);
     if (ctx.elapsedMs <= quick) return 'easy';

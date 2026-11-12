@@ -123,6 +123,8 @@ export interface AnswerRecord {
   variant?: string;
   /** False for a second try inside a session: it earns nothing and does not move the schedule. */
   graded: boolean;
+  /** True for "I already know this": it schedules the item but is not counted as an answer. */
+  silent?: boolean;
 }
 
 export function recordAnswers(records: AnswerRecord[]): void {
@@ -142,16 +144,17 @@ export function recordAnswers(records: AnswerRecord[]): void {
   persist((d) => saveCards(d, changed));
 
   const xp = graded.reduce((s, r) => s + r.xp, 0);
-  const right = graded.filter((r) => r.grade !== 'again').length;
+  const counted = graded.filter((r) => !r.silent);
+  const right = counted.filter((r) => r.grade !== 'again').length;
   const p = profile.value;
   setProfile({
     ...p,
     xp: p.xp + xp,
-    totals: { ...p.totals, answers: p.totals.answers + graded.length, correct: p.totals.correct + right },
-    recent: [...p.recent, ...graded.map((r) => (r.grade === 'again' ? 0 : 1))].slice(-RECENT_WINDOW),
+    totals: { ...p.totals, answers: p.totals.answers + counted.length, correct: p.totals.correct + right },
+    recent: [...p.recent, ...counted.map((r) => (r.grade === 'again' ? 0 : 1))].slice(-RECENT_WINDOW),
   });
   const day = days.value.get(today.value) ?? emptyDay(today.value);
-  setDay({ ...day, xp: day.xp + xp, answers: day.answers + graded.length, correct: day.correct + right });
+  setDay({ ...day, xp: day.xp + xp, answers: day.answers + counted.length, correct: day.correct + right });
 }
 
 export function achievementStats(): AchievementStats {

@@ -65,6 +65,8 @@ const BASE_XP: Record<string, number> = {
   type: 16,
 };
 
+/** For saying "I already know this" about a new item. */
+export const KNOWN_XP = 3;
 export const MAX_COMBO_BONUS = 5;
 export const SESSION_BONUS = 20;
 export const PERFECT_BONUS = 15;

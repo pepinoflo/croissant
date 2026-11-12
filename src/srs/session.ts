@@ -41,10 +41,14 @@ export interface PlanOptions {
   seenGrammar?: Set<string>;
 }
 
-export const SIZES: Record<SessionSize, { reviews: number; fresh: number; minutes: number }> = {
-  short: { reviews: 10, fresh: 5, minutes: 3 },
-  normal: { reviews: 15, fresh: 8, minutes: 5 },
-  long: { reviews: 25, fresh: 12, minutes: 10 },
+/**
+ * A session aims at `questions` exercises: up to `reviews` items that are due,
+ * and new items to fill the rest (around `fresh` on a typical day).
+ */
+export const SIZES: Record<SessionSize, { questions: number; reviews: number; fresh: number; minutes: number }> = {
+  short: { questions: 15, reviews: 12, fresh: 4, minutes: 3 },
+  normal: { questions: 25, reviews: 20, fresh: 8, minutes: 5 },
+  long: { questions: 45, reviews: 36, fresh: 14, minutes: 10 },
 };
 
 export const MATCH_SIZE = 4;
@@ -82,18 +86,18 @@ export function countItems(catalog: Catalog, cards: Map<string, CardState>, now:
 }
 
 /**
- * How many new items to introduce. Fewer when recent answers show a struggle,
- * none when reviews have piled up, more when there is little to review.
+ * How many new items to introduce: whatever room the due reviews leave in the
+ * session. None when reviews have piled up, fewer when recent answers show a
+ * struggle, a couple more when everything is going well.
  */
 export function newAllowance(size: SessionSize, dueTotal: number, recentAccuracy: number | null): number {
-  const { reviews, fresh } = SIZES[size];
+  const { questions, reviews, fresh } = SIZES[size];
   if (dueTotal > reviews * 2) return 0;
-  let n = fresh;
+  let n = Math.min(fresh * 2, questions - Math.min(dueTotal, reviews));
   if (recentAccuracy !== null) {
     if (recentAccuracy >= 0.9) n += 2;
     else if (recentAccuracy < 0.7) n = Math.ceil(n / 2);
   }
-  if (dueTotal < reviews) n = Math.min(n * 2, n + Math.floor((reviews - dueTotal) / 2));
   return n;
 }
 
@@ -208,6 +212,45 @@ export function planSession(opts: PlanOptions): Plan {
     newCount: fresh.length,
     mode,
   };
+}
+
+/**
+ * The next unseen item to bring into a session after one was skipped as
+ * "already known". Prefers the lesson the skipped item came from.
+ */
+export function nextUnseen(
+  catalog: Catalog,
+  cards: Map<string, CardState>,
+  planned: Set<string>,
+  preferLessonId?: string,
+  focusLessonId?: string,
+): StudyItem | null {
+  // Items already in the session count as seen for this purpose.
+  const masked = new Map(cards);
+  for (const id of planned) if (!isSeen(masked.get(id))) masked.set(id, { reps: 1 } as CardState);
+  const lesson = focusLessonId ?? preferLessonId;
+  const same = lesson ? pickNew(catalog, masked, 1, lesson) : [];
+  if (same.length) return same[0];
+  if (focusLessonId) return null;
+  return pickNew(catalog, masked, 1)[0] ?? null;
+}
+
+/** Adds a new item after the current step: its introduction next, its first question a few steps later. */
+export function withNewItem(steps: Step[], index: number, item: StudyItem): Step[] {
+  const next = [...steps];
+  const quiz: Step = { kind: 'quiz', itemId: item.id, isNew: true };
+  if (item.type === 'cloze') {
+    next.splice(Math.min(index + 1, next.length), 0, quiz);
+    return next;
+  }
+  next.splice(index + 1, 0, { kind: 'intro', itemId: item.id, isNew: true });
+  next.splice(Math.min(index + RETRY_GAP + 1, next.length), 0, quiz);
+  return next;
+}
+
+/** Removes the question still to come for an item (used when it is skipped as already known). */
+export function withoutQuiz(steps: Step[], index: number, itemId: string): Step[] {
+  return steps.filter((s, i) => !(i > index && s.kind === 'quiz' && s.itemId === itemId));
 }
 
 export const RETRY_GAP = 4;

@@ -83,6 +83,11 @@ describe('gradeFor', () => {
   it('never calls a multiple-choice answer easy: it could be a guess', () => {
     expect(gradeFor('exact', { production: false, elapsedMs: 500 })).toBe('good');
   });
+  it('treats a quick right answer on something never shown before as already known', () => {
+    expect(gradeFor('exact', { production: false, elapsedMs: 3000, firstSight: true })).toBe('easy');
+    expect(gradeFor('exact', { production: false, elapsedMs: 20000, firstSight: true })).toBe('good');
+    expect(gradeFor('wrong', { production: false, elapsedMs: 3000, firstSight: true })).toBe('again');
+  });
   it('allows longer answers more time', () => {
     expect(gradeFor('exact', { production: true, elapsedMs: 9000, answerWords: 5 })).toBe('easy');
     expect(gradeFor('exact', { production: true, elapsedMs: 9000, answerWords: 1 })).toBe('good');

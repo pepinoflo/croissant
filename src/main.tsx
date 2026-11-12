@@ -46,6 +46,13 @@ const applyUpdate = registerSW({
   onNeedRefresh() {
     updateReady.value = () => void applyUpdate(true);
   },
+  onRegisteredSW(_url, registration) {
+    // A home-screen app can stay open for days, so look for a new version
+    // each time it comes back to the front, not only when it is launched.
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible' && navigator.onLine) void registration?.update().catch(() => undefined);
+    });
+  },
 });
 
 render(<App />, document.getElementById('app')!);
