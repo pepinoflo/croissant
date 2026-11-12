@@ -46,6 +46,10 @@ Progress lives only on the iPad, in Safari's built-in storage. If the iPad is lo
 4. It writes the lesson, checks it, runs the tests, moves the notes to `lessons/archive/`, commits and pushes.
 5. About two minutes later the site is updated. The next time she opens the app with an internet connection, the home screen shows **"A new version is ready"** with an *Update* button.
 
+### Without this computer
+
+The same command works in a cloud session at [claude.ai/code](https://claude.ai/code): choose the `croissant` repository, type `/add-lesson`, and paste the notes after it in the same message. Two differences: the lesson arrives as a pull request, and it goes live once you agree to merge it; and the pasted notes are kept in that session's history in your Claude account rather than in `lessons/archive/` (they are still never committed).
+
 Adding lessons never touches her progress: every word and sentence has a permanent id, and the checks refuse any change that would remove or rename one.
 
 ### Privacy
