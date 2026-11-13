@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { clozeParts, tokenize, vocabDisplay } from '../src/content/french';
 import { isStudyItem, type Lesson } from '../src/content/types';
 import { buildExercise, generateExercise, tilesMatch, variantsFor, type GenContext } from '../src/exercises/generate';
-import { checkAnswer } from '../src/srs/grading';
+import { checkAnswer, fold } from '../src/srs/grading';
 // @ts-expect-error plain JS module shared with the command-line validator
 import { readLock, validateLessons } from '../scripts/validate-lessons.mjs';
 import { loadCatalog, loadLessons, seeded } from './helpers';
@@ -60,7 +60,7 @@ describe('every item can be turned into every exercise it supports', () => {
       const variants = variantsFor(item, level, ctx);
       expect(variants.length, `level ${level}`).toBeGreaterThan(0);
       for (const [variant] of variants) {
-        const ex = buildExercise(item, variant, ctx);
+        const ex = buildExercise(item, variant, ctx, level);
         expect(ex.itemId).toBe(item.id);
         expect(ex.answer.fr.length).toBeGreaterThan(0);
 
@@ -77,14 +77,23 @@ describe('every item can be turned into every exercise it supports', () => {
         }
         if (ex.kind === 'unscramble') {
           expect(ex.tiles.length).toBeGreaterThanOrEqual(3);
-          const solution = tokenize(ex.accepted[0]);
-          expect([...ex.tiles].sort()).toEqual(
-            solution.map((t, i) => (i === 0 ? t.charAt(0).toLocaleLowerCase('fr') + t.slice(1) : t)).sort(),
-          );
+          const solution = tokenize(ex.accepted[0]).map((t, i) => (i === 0 ? t.charAt(0).toLocaleLowerCase('fr') + t.slice(1) : t));
+          expect(ex.tiles.length, `${variant}: tiles`).toBe(solution.length + ex.traps);
+          // Every word of the sentence is there once; the rest are traps.
+          const left = [...ex.tiles];
+          for (const t of solution) {
+            const at = left.indexOf(t);
+            expect(at, `${variant}: missing tile "${t}"`).toBeGreaterThanOrEqual(0);
+            left.splice(at, 1);
+          }
+          // A trap never belongs to a correct answer, so it can never be needed.
+          const words = new Set(ex.accepted.flatMap((a) => tokenize(a).map(fold)));
+          for (const trap of left) expect(words.has(fold(trap)), `${variant}: trap "${trap}" is in a correct answer`).toBe(false);
           expect(tilesMatch(solution, ex.accepted)).toBe(true);
           expect(tilesMatch(ex.tiles, ex.accepted), `${variant}: tiles start out solved`).toBe(false);
         }
         if (ex.kind === 'gender') expect(['m', 'f']).toContain(ex.gender);
+        if (ex.kind === 'open') expect(ex.models.length).toBeGreaterThanOrEqual(2);
       }
     }
   });

@@ -78,6 +78,52 @@ export interface ClozeItem extends BaseItem {
   grammar?: string;
 }
 
+/**
+ * A sentence to produce in French from its English meaning. Written for practice:
+ * built from the lesson's words and grammar, not copied from the notes.
+ * `fr` and `frAlt` may hold alternatives in square brackets — "Je suis [allée|allé] au marché." —
+ * and the first option is the one displayed.
+ */
+export interface SentenceItem extends BaseItem {
+  type: 'sentence';
+  fr: string;
+  en: string;
+  frAlt?: string[];
+  /** Short tip in English shown under the prompt, e.g. "use the passé composé". */
+  hint?: string;
+  /** Wrong words mixed into the word bank (a wrong ending, the wrong article…). */
+  traps?: string[];
+  grammar?: string;
+}
+
+/** Rewrite a French sentence: make it negative, put it in the past, turn it into a question… */
+export interface TransformItem extends BaseItem {
+  type: 'transform';
+  /** The instruction in French, e.g. "Mets la phrase au passé composé." */
+  task: string;
+  taskEn: string;
+  /** The sentence to start from. */
+  from: string;
+  /** The rewritten sentence (alternatives in square brackets allowed, as for sentences). */
+  fr: string;
+  en: string;
+  frAlt?: string[];
+  traps?: string[];
+  grammar?: string;
+}
+
+/** An open question to answer in a full sentence of her own. Self-assessed against model answers. */
+export interface QuestionItem extends BaseItem {
+  type: 'question';
+  fr: string;
+  en: string;
+  /** How to build the answer, in English, e.g. "Answer with j'ai… or je suis allée…". */
+  hint?: string;
+  /** Two or three example answers. */
+  models: string[];
+  grammar?: string;
+}
+
 export interface GrammarItem extends BaseItem {
   type: 'grammar';
   title: string;
@@ -87,7 +133,15 @@ export interface GrammarItem extends BaseItem {
   examples?: Example[];
 }
 
-export type Item = VocabItem | PhraseItem | ConjugationItem | ClozeItem | GrammarItem;
+export type Item =
+  | VocabItem
+  | PhraseItem
+  | ConjugationItem
+  | ClozeItem
+  | SentenceItem
+  | TransformItem
+  | QuestionItem
+  | GrammarItem;
 /** Items that are scheduled for review (everything except grammar reference cards). */
 export type StudyItem = Exclude<Item, GrammarItem>;
 
@@ -105,4 +159,9 @@ export interface Lesson {
 
 export function isStudyItem(item: Item): item is StudyItem {
   return item.type !== 'grammar';
+}
+
+/** Items that are asked straight away, without an introduction card: the question is the lesson. */
+export function needsIntro(item: StudyItem): boolean {
+  return item.type === 'vocab' || item.type === 'phrase' || item.type === 'conjugation';
 }

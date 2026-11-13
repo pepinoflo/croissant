@@ -2003,3 +2003,74 @@ img.picture {
     transition-duration: 0.01ms !important;
   }
 }
+
+/* Sentences: a bigger answer box, the word-by-word correction, open answers */
+textarea.type-input-long {
+  height: auto;
+  min-height: 120px;
+  padding: 14px 18px;
+  font-size: 22px;
+  line-height: 1.35;
+  text-align: left;
+  resize: none;
+}
+.say-cue {
+  align-self: center;
+  color: var(--ink-soft);
+  font-weight: 600;
+}
+.flash-actions-say {
+  flex-direction: column;
+}
+.correction {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.correction .given {
+  font-size: 18px;
+  color: var(--ink-soft);
+  text-decoration: line-through;
+  text-decoration-color: var(--bad);
+  -webkit-user-select: text;
+  user-select: text;
+}
+.diff {
+  font-size: 22px;
+  line-height: 1.35;
+  -webkit-user-select: text;
+  user-select: text;
+}
+.diff-miss {
+  background: var(--accent-soft);
+  box-shadow: inset 0 -3px 0 var(--accent);
+  border-radius: 4px;
+}
+.sheet-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.models {
+  align-items: stretch;
+}
+.models ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.models li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  font-size: 20px;
+}
+.row-from,
+.row-model {
+  font-size: 14.5px;
+  color: var(--ink-soft);
+}

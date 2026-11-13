@@ -1,6 +1,6 @@
 // Cards that present lesson content: a word, a phrase, a verb table, a grammar point.
 
-import { conjugationTitle, PRONOUN_LABEL, pretty, vocabDisplay, withPronoun } from '../content/french';
+import { canonical, conjugationTitle, PRONOUN_LABEL, pretty, vocabDisplay, withPronoun } from '../content/french';
 import { PERSONS, type ConjugationItem, type GrammarItem, type PhraseItem, type StudyItem, type VocabItem } from '../content/types';
 import { Fr, Picture, RichText, SpeakButton } from './ui';
 
@@ -10,6 +10,8 @@ export function frenchOf(item: StudyItem): string {
   if (item.type === 'vocab') return vocabDisplay(item);
   if (item.type === 'phrase') return item.fr;
   if (item.type === 'conjugation') return conjugationTitle(item);
+  if (item.type === 'sentence' || item.type === 'transform') return canonical(item.fr);
+  if (item.type === 'question') return item.fr;
   return item.fr.replace(/\{\{(.+?)\}\}/, '$1');
 }
 
@@ -77,8 +79,8 @@ function ConjugationCard({ item }: { item: ConjugationItem }) {
 /** How a new item is presented the first time it appears in a session. */
 export function IntroCard({ item }: { item: StudyItem }) {
   if (item.type === 'conjugation') return <ConjugationCard item={item} />;
-  if (item.type === 'cloze') return null;
-  return <WordCard item={item} />;
+  if (item.type === 'vocab' || item.type === 'phrase') return <WordCard item={item} />;
+  return null;
 }
 
 export function GrammarCard({ item }: { item: GrammarItem }) {

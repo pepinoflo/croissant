@@ -18,7 +18,7 @@ export const LOCK_FILE = join(LESSONS_DIR, 'ids.lock.json');
 const SCHEMA_FILE = join(LESSONS_DIR, 'schema', 'lesson.v1.schema.json');
 const PUBLIC_DIR = join(ROOT, 'public');
 
-const TYPE_LETTER = { vocab: 'v', phrase: 'p', conjugation: 'c', cloze: 'x', grammar: 'g' };
+const TYPE_LETTER = { vocab: 'v', phrase: 'p', conjugation: 'c', cloze: 'x', sentence: 's', transform: 't', question: 'q', grammar: 'g' };
 const CLOZE = /\{\{(.+?)\}\}/;
 
 const norm = (s) =>
@@ -29,6 +29,23 @@ const norm = (s) =>
     .replace(/[.,!?;:…«»"()]/g, ' ')
     .replace(/\s+/g, ' ')
     .trim();
+
+/** Problems with "[a|b]" alternatives in a sentence, or null. */
+function altProblem(s) {
+  let depth = 0;
+  for (const ch of s) {
+    if (ch === '[') depth++;
+    if (ch === ']') depth--;
+    if (depth < 0 || depth > 1) return 'has unbalanced or nested [ ] alternatives';
+  }
+  if (depth !== 0) return 'has an unclosed [ alternative';
+  if (/\[[^|\]]*\]/.test(s)) return 'has [ ] without a | between the options';
+  if (/\{\{|\}\}/.test(s)) return 'has {{ }}, which only cloze items use';
+  return null;
+}
+
+/** The displayed version of a sentence with alternatives: the first option of each. */
+const firstOption = (s) => s.replace(/\[([^[\]]*)\]/g, (_, inner) => inner.split('|')[0]).replace(/\s+/g, ' ').trim();
 
 export function readLessonFiles(dir = LESSONS_DIR) {
   return readdirSync(dir)
@@ -114,6 +131,24 @@ export function validateLessons(entries, lock = { ids: [], retired: [] }, opts =
 
       if (item.type === 'phrase') {
         if (item.frAlt?.some((a) => norm(a) === norm(item.fr))) err('"frAlt" repeats "fr"');
+      }
+
+      if (item.type === 'sentence' || item.type === 'transform') {
+        for (const [key, text] of [['fr', item.fr], ...(item.frAlt ?? []).map((a) => ['frAlt', a])]) {
+          const problem = altProblem(text);
+          if (problem) err(`"${key}" ${problem}: ${text}`);
+        }
+        if (item.frAlt?.some((a) => norm(a) === norm(item.fr))) err('"frAlt" repeats "fr"');
+        const words = new Set(firstOption(item.fr).split(/\s+/).map(norm));
+        for (const t of item.traps ?? []) {
+          if (/\s/.test(t)) err(`trap "${t}" must be a single word`);
+          if (words.has(norm(t))) err(`trap "${t}" is a word of the sentence itself`);
+        }
+        if (item.type === 'transform' && norm(firstOption(item.fr)) === norm(item.from)) err('"fr" is the same as "from"');
+      }
+
+      if (item.type === 'question') {
+        if (item.models.length < 2) err('give at least two model answers');
       }
 
       if (item.type === 'cloze') {
