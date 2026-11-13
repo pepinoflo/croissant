@@ -59,13 +59,23 @@ export interface TypeExercise extends BaseExercise {
   accepted: string[];
   check: CheckOptions;
   answerWords: number;
+  /** A whole sentence: a bigger box, a word-by-word correction, and an "I was right" button. */
+  sentence?: boolean;
 }
 
 export interface UnscrambleExercise extends BaseExercise {
   kind: 'unscramble';
-  /** Shuffled word tiles. */
+  /** Shuffled word tiles, the traps included. */
   tiles: string[];
   accepted: string[];
+  /** How many of the tiles are wrong words that do not belong in the sentence. */
+  traps: number;
+}
+
+/** An open question: she writes or says her own answer, then compares it with examples. */
+export interface OpenExercise extends BaseExercise {
+  kind: 'open';
+  models: string[];
 }
 
 export interface FlashcardExercise extends BaseExercise {
@@ -97,6 +107,7 @@ export type QuizExercise =
   | TypeExercise
   | UnscrambleExercise
   | FlashcardExercise
-  | GenderExercise;
+  | GenderExercise
+  | OpenExercise;
 
 export type Exercise = QuizExercise | MatchExercise;

@@ -9,6 +9,7 @@ import type {
   FlashcardExercise,
   GenderExercise,
   MatchExercise,
+  OpenExercise,
   Prompt,
   TypeExercise,
   UnscrambleExercise,
@@ -25,7 +26,11 @@ export interface Outcome {
   grade?: Grade;
   /** The spelling to show when the answer was accepted with a correction. */
   expected?: string;
+  /** What she typed, for the word-by-word correction of a sentence. */
+  given?: string;
   selfRated?: boolean;
+  /** She said her answer was right after all (a sentence can be translated many ways). */
+  overridden?: boolean;
 }
 
 interface ViewProps<E> {
@@ -127,7 +132,7 @@ export function AccentBar({ onInsert }: { onInsert: (ch: string) => void }) {
 export function TypeView({ ex, locked, onAnswer }: ViewProps<TypeExercise>) {
   const [value, setValue] = useState('');
   const [state, setState] = useState<'right' | 'wrong' | undefined>();
-  const input = useRef<HTMLInputElement>(null);
+  const input = useRef<HTMLInputElement & HTMLTextAreaElement>(null);
 
   useEffect(() => {
     // Focus without scrolling the page; on iPad this also raises the keyboard.
@@ -152,8 +157,24 @@ export function TypeView({ ex, locked, onAnswer }: ViewProps<TypeExercise>) {
     const result = checkAnswer(given, ex.accepted, ex.check);
     setState(result.verdict === 'wrong' ? 'wrong' : 'right');
     input.current?.blur();
-    onAnswer({ verdict: result.verdict, expected: result.expected });
+    onAnswer({ verdict: result.verdict, expected: result.expected, given });
   };
+
+  const field = {
+    ref: input,
+    class: `type-input ${ex.sentence ? 'type-input-long' : ''} ${state ? `is-${state}` : ''}`,
+    lang: 'fr',
+    value,
+    readOnly: locked,
+    onInput: (e: Event) => setValue((e.target as HTMLInputElement).value),
+    placeholder: ex.sentence ? 'Écris la phrase en français…' : 'Écris en français…',
+    autocomplete: 'off',
+    autocorrect: 'off',
+    autocapitalize: ex.sentence ? 'sentences' : 'off',
+    spellcheck: false,
+    enterkeyhint: 'done',
+    'aria-label': 'Your answer in French',
+  } as const;
 
   return (
     <>
@@ -165,22 +186,21 @@ export function TypeView({ ex, locked, onAnswer }: ViewProps<TypeExercise>) {
           if (value.trim()) submit(value);
         }}
       >
-        <input
-          ref={input}
-          class={`type-input ${state ? `is-${state}` : ''}`}
-          type="text"
-          lang="fr"
-          value={value}
-          readOnly={locked}
-          onInput={(e) => setValue((e.target as HTMLInputElement).value)}
-          placeholder="Écris en français…"
-          autocomplete="off"
-          autocorrect="off"
-          autocapitalize="off"
-          spellcheck={false}
-          enterkeyhint="done"
-          aria-label="Your answer in French"
-        />
+        {ex.sentence ? (
+          <textarea
+            {...field}
+            rows={3}
+            onKeyDown={(e) => {
+              // Return checks the answer, as in the one-line box.
+              if (e.key === 'Enter') {
+                e.preventDefault();
+                if (value.trim()) submit(value);
+              }
+            }}
+          />
+        ) : (
+          <input {...field} type="text" />
+        )}
         {!locked && (
           <>
             <AccentBar onInsert={insert} />
@@ -204,15 +224,18 @@ export function UnscrambleView({ ex, locked, onAnswer }: ViewProps<UnscrambleExe
   const [state, setState] = useState<'right' | 'wrong' | undefined>();
   const used = new Set(placed);
   const check = () => {
-    const ok = tilesMatch(placed.map((i) => ex.tiles[i]), ex.accepted);
+    const words = placed.map((i) => ex.tiles[i]);
+    const ok = tilesMatch(words, ex.accepted);
     setState(ok ? 'right' : 'wrong');
-    onAnswer({ verdict: ok ? 'exact' : 'wrong' });
+    onAnswer({ verdict: ok ? 'exact' : 'wrong', given: words.join(' ') });
   };
   return (
     <>
       <PromptView prompt={ex.prompt} />
       <div class={`tray ${state ? `is-${state}` : ''}`} lang="fr">
-        {placed.length === 0 && <span class="tray-hint">Tap the words in order</span>}
+        {placed.length === 0 && (
+          <span class="tray-hint">{ex.traps ? 'Tap the words in order. Not every word is needed.' : 'Tap the words in order'}</span>
+        )}
         {placed.map((i) => (
           <button
             key={i}
@@ -249,7 +272,7 @@ export function UnscrambleView({ ex, locked, onAnswer }: ViewProps<UnscrambleExe
           <Button kind="ghost" onClick={() => setPlaced([])} disabled={!placed.length}>
             Effacer
           </Button>
-          <Button onClick={check} disabled={placed.length !== ex.tiles.length}>
+          <Button onClick={check} disabled={ex.traps ? placed.length < 2 : placed.length !== ex.tiles.length}>
             Vérifier
           </Button>
         </div>
@@ -260,6 +283,7 @@ export function UnscrambleView({ ex, locked, onAnswer }: ViewProps<UnscrambleExe
 
 export function FlashcardView({ ex, locked, onAnswer }: ViewProps<FlashcardExercise>) {
   const [shown, setShown] = useState(false);
+  const said = ex.xpKind === 'say';
   const reveal = () => {
     setShown(true);
     if (ex.back.lang === 'fr') speak(ex.back.text);
@@ -268,9 +292,10 @@ export function FlashcardView({ ex, locked, onAnswer }: ViewProps<FlashcardExerc
     <>
       <PromptView prompt={ex.prompt} />
       {!shown ? (
-        <div class="flash-actions">
+        <div class={`flash-actions ${said ? 'flash-actions-say' : ''}`}>
+          {said && <p class="say-cue">Say the whole sentence aloud, then check.</p>}
           <Button onClick={reveal} wide>
-            Show the answer
+            {said ? 'I said it — show me' : 'Show the answer'}
           </Button>
         </div>
       ) : (
@@ -285,16 +310,84 @@ export function FlashcardView({ ex, locked, onAnswer }: ViewProps<FlashcardExerc
           </div>
           {!locked && (
             <div class="rate">
-              <p class="instruction">Did you know it?</p>
+              <p class="instruction">{said ? 'Did you say it right?' : 'Did you know it?'}</p>
               <div class="rate-buttons">
                 <Button kind="bad" onClick={() => onAnswer({ verdict: 'wrong', grade: 'again', selfRated: true })}>
                   Pas encore
                 </Button>
                 <Button kind="secondary" onClick={() => onAnswer({ verdict: 'accent', grade: 'hard', selfRated: true })}>
-                  Presque
+                  {said ? 'Avec des fautes' : 'Presque'}
                 </Button>
                 <Button kind="good" onClick={() => onAnswer({ verdict: 'exact', grade: 'good', selfRated: true })}>
-                  Je sais !
+                  {said ? 'Parfait !' : 'Je sais !'}
+                </Button>
+              </div>
+            </div>
+          )}
+        </>
+      )}
+    </>
+  );
+}
+
+export function OpenView({ ex, locked, onAnswer }: ViewProps<OpenExercise>) {
+  const [value, setValue] = useState('');
+  const [shown, setShown] = useState(false);
+  const rate = (verdict: Verdict, grade: Grade) => onAnswer({ verdict, grade, selfRated: true });
+  return (
+    <>
+      <PromptView prompt={ex.prompt} />
+      <div class="type">
+        <textarea
+          class="type-input type-input-long"
+          lang="fr"
+          rows={3}
+          value={value}
+          readOnly={shown}
+          onInput={(e) => setValue((e.target as HTMLTextAreaElement).value)}
+          placeholder="Write your answer, or say it out loud…"
+          autocomplete="off"
+          autocapitalize="sentences"
+          spellcheck={false}
+          aria-label="Your answer in French"
+        />
+        {!shown && (
+          <>
+            <AccentBar onInsert={(ch) => setValue(value + ch)} />
+            <div class="type-actions">
+              <Button onClick={() => setShown(true)} wide>
+                {value.trim() ? 'Compare with examples' : 'I said it — show examples'}
+              </Button>
+            </div>
+          </>
+        )}
+      </div>
+      {shown && (
+        <>
+          <div class="flash-back models">
+            <p class="instruction">Possible answers</p>
+            <ul>
+              {ex.models.map((m) => (
+                <li key={m}>
+                  <Fr>{m}</Fr>
+                  <SpeakButton text={m} />
+                </li>
+              ))}
+            </ul>
+            <p class="quiet small">{ex.answer.en}</p>
+          </div>
+          {!locked && (
+            <div class="rate">
+              <p class="instruction">How was your answer?</p>
+              <div class="rate-buttons">
+                <Button kind="bad" onClick={() => rate('wrong', 'again')}>
+                  Pas encore
+                </Button>
+                <Button kind="secondary" onClick={() => rate('accent', 'hard')}>
+                  Avec des fautes
+                </Button>
+                <Button kind="good" onClick={() => rate('exact', 'good')}>
+                  Correcte !
                 </Button>
               </div>
             </div>

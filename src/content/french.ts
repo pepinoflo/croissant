@@ -83,6 +83,41 @@ export function tokenize(fr: string): string[] {
   return fr
     .replace(/[.!?…]+\s*$/u, '')
     .split(/\s+/)
-    .map((t) => t.replace(/^[«"(]+|[»"),;:]+$/gu, ''))
+    .map((t) => t.replace(/^[«"(]+|[»"),;:.!?…]+$/gu, ''))
     .filter((t) => t.length > 0 && !/^[?!:;,.…—–-]+$/u.test(t));
+}
+
+const ALT = /\[([^[\]]*)\]/;
+const MAX_VARIANTS = 64;
+
+/**
+ * Expands "[a|b]" alternatives into every sentence they describe:
+ * "Je suis [allée|allé] au marché." → ["Je suis allée au marché.", "Je suis allé au marché."].
+ * An empty option makes a word optional: "Je [ne |]sais pas".
+ */
+export function expandAlternatives(s: string): string[] {
+  const m = ALT.exec(s);
+  if (!m) return [s.replace(/\s+/g, ' ').trim()];
+  const before = s.slice(0, m.index);
+  const after = s.slice(m.index + m[0].length);
+  const out: string[] = [];
+  for (const option of m[1].split('|')) {
+    for (const rest of expandAlternatives(before + option + after)) {
+      if (!out.includes(rest)) out.push(rest);
+      if (out.length >= MAX_VARIANTS) return out;
+    }
+  }
+  return out;
+}
+
+/** The sentence as displayed: the first option of every alternative. */
+export function canonical(s: string): string {
+  return expandAlternatives(s)[0];
+}
+
+/** Every accepted spelling of a sentence written with alternatives, the displayed one first. */
+export function acceptedSentences(fr: string, frAlt: string[] = []): string[] {
+  const out: string[] = [];
+  for (const s of [fr, ...frAlt]) for (const v of expandAlternatives(s)) if (!out.includes(v)) out.push(v);
+  return out;
 }

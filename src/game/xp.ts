@@ -62,7 +62,11 @@ const BASE_XP: Record<string, number> = {
   listen: 12,
   match: 6,
   unscramble: 14,
+  say: 12,
+  bank: 16,
   type: 16,
+  write: 22,
+  open: 22,
 };
 
 /** For saying "I already know this" about a new item. */

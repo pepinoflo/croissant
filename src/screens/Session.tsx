@@ -8,6 +8,7 @@ import {
   FlashcardView,
   GenderView,
   MatchView,
+  OpenView,
   TypeView,
   UnscrambleView,
   type MatchResult,
@@ -16,13 +17,14 @@ import {
 import { Bar, Button, Confetti, Croissant, Fr, Icon, SpeakButton } from '../components/ui';
 import { pretty } from '../content/french';
 import { catalog } from '../content/load';
-import type { PhraseItem, StudyItem, VocabItem } from '../content/types';
+import { needsIntro, type PhraseItem, type StudyItem, type VocabItem } from '../content/types';
 import { generateExercise, generateMatch } from '../exercises/generate';
 import type { Exercise, QuizExercise } from '../exercises/types';
 import { KNOWN_XP, levelInfo, xpForAnswer } from '../game/xp';
 import { sfx } from '../speech/sfx';
 import { canSpeak, speak, stopSpeaking } from '../speech/tts';
-import { gradeFor } from '../srs/grading';
+import { diffWords, gradeFor } from '../srs/grading';
+import type { Grade } from '../srs/scheduler';
 import { nextUnseen, planSession, withNewItem, withoutQuiz, withRetry, type Step } from '../srs/session';
 import {
   cards,
@@ -45,6 +47,47 @@ interface Feedback {
   praise: string;
 }
 
+/** An answer waiting to be saved: it is recorded when she moves on, so it can still be corrected. */
+interface Pending {
+  itemId: string;
+  variant: string;
+  xpKind: string;
+  grade: Grade;
+  xp: number;
+  graded: boolean;
+  wrong: boolean;
+  comboBefore: number;
+}
+
+/** Whether "my answer was right too" is offered: free sentences can be said in more than one way. */
+function canOverride(ex: QuizExercise, outcome: Outcome): boolean {
+  if (outcome.verdict !== 'wrong' || !outcome.given?.trim()) return false;
+  return (ex.kind === 'type' && !!ex.sentence) || (ex.kind === 'unscramble' && ex.traps > 0);
+}
+
+function Correction({ given, expected }: { given: string; expected: string }) {
+  const parts = diffWords(given, expected);
+  return (
+    <span class="correction">
+      <span class="sheet-hint">You wrote:</span>
+      <span class="given" lang="fr">
+        {pretty(given)}
+      </span>
+      <span class="sheet-hint">Correct sentence (the words to check are marked):</span>
+      <span class="fr diff" lang="fr">
+        {parts.map((p, i) => (
+          <>
+            {i > 0 && ' '}
+            <span key={i} class={p.ok ? '' : 'diff-miss'}>
+              {pretty(p.word)}
+            </span>
+          </>
+        ))}
+      </span>
+    </span>
+  );
+}
+
 function ExerciseView({ ex, locked, onAnswer }: { ex: QuizExercise; locked: boolean; onAnswer: (o: Outcome) => void }) {
   switch (ex.kind) {
     case 'choice':
@@ -57,15 +100,37 @@ function ExerciseView({ ex, locked, onAnswer }: { ex: QuizExercise; locked: bool
       return <FlashcardView ex={ex} locked={locked} onAnswer={onAnswer} />;
     case 'gender':
       return <GenderView ex={ex} locked={locked} onAnswer={onAnswer} />;
+    case 'open':
+      return <OpenView ex={ex} locked={locked} onAnswer={onAnswer} />;
   }
 }
 
-function FeedbackSheet({ feedback, retry, onNext }: { feedback: Feedback; retry: boolean; onNext: () => void }) {
+function FeedbackSheet({
+  feedback,
+  retry,
+  onNext,
+  onOverride,
+}: {
+  feedback: Feedback;
+  retry: boolean;
+  onNext: () => void;
+  onOverride: () => void;
+}) {
   const { outcome, ex, xp } = feedback;
   const v = outcome.verdict;
   const tone = v === 'wrong' ? 'bad' : v === 'exact' ? 'good' : 'near';
-  const title =
-    v === 'exact' ? feedback.praise : v === 'wrong' ? 'Pas tout à fait' : v === 'gender' ? 'Le bon mot, mais…' : 'Presque parfait !';
+  const title = outcome.overridden
+    ? 'D’accord, c’est noté !'
+    : v === 'exact'
+      ? feedback.praise
+      : v === 'wrong'
+        ? 'Pas tout à fait'
+        : v === 'gender'
+          ? 'Le bon mot, mais…'
+          : 'Presque parfait !';
+  const expected = outcome.expected ?? ex.answer.fr;
+  const sentence = (ex.kind === 'type' && ex.sentence) || (ex.kind === 'unscramble' && ex.traps > 0);
+  const showCorrection = sentence && !!outcome.given?.trim() && v !== 'exact';
   const hint =
     v === 'accent'
       ? 'Mind the accents:'
@@ -88,18 +153,34 @@ function FeedbackSheet({ feedback, retry, onNext }: { feedback: Feedback; retry:
           {retry && v !== 'wrong' && <span class="xp-chip xp-chip-quiet">practice</span>}
         </div>
         <div class="sheet-answer">
-          {hint && <span class="sheet-hint">{hint}</span>}
-          <span class="sheet-fr">
-            <Fr>{ex.answer.fr}</Fr>
-            <SpeakButton text={ex.answer.fr} />
-          </span>
+          {showCorrection ? (
+            <>
+              <Correction given={outcome.given!} expected={expected} />
+              <SpeakButton text={expected} />
+            </>
+          ) : (
+            <>
+              {hint && !outcome.overridden && <span class="sheet-hint">{hint}</span>}
+              <span class="sheet-fr">
+                <Fr>{sentence ? expected : ex.answer.fr}</Fr>
+                <SpeakButton text={sentence ? expected : ex.answer.fr} />
+              </span>
+            </>
+          )}
           <span class="sheet-en">{ex.answer.en}</span>
           {ex.answer.note && <span class="note">{pretty(ex.answer.note)}</span>}
         </div>
       </div>
-      <Button kind={tone === 'bad' ? 'bad' : 'good'} onClick={onNext} wide>
-        Continuer
-      </Button>
+      <div class="sheet-actions">
+        {canOverride(ex, outcome) && (
+          <Button kind="ghost" onClick={onOverride}>
+            My answer was right too
+          </Button>
+        )}
+        <Button kind={tone === 'bad' ? 'bad' : 'good'} onClick={onNext} wide>
+          Continuer
+        </Button>
+      </div>
     </div>
   );
 }
@@ -287,7 +368,30 @@ export function Session({ focusLessonId, onAgain }: { focusLessonId?: string; on
     else sfx.complete();
   };
 
+  const pending = useRef<Pending | null>(null);
+
+  /** Saves the answer on screen, and plans a second try if it was wrong. */
+  const commit = () => {
+    const p = pending.current;
+    if (!p) return;
+    pending.current = null;
+    recordAnswers([{ itemId: p.itemId, grade: p.grade, xp: p.xp, variant: p.variant, graded: p.graded }]);
+    const s = stats.current;
+    if (p.graded) {
+      s.answers++;
+      s.xp += p.xp;
+      if (!p.wrong) s.correct++;
+    }
+    if (p.wrong) {
+      s.missed.add(p.itemId);
+      const nextSteps = withRetry(live.current.steps, live.current.index);
+      setSteps(nextSteps);
+      live.current = { ...live.current, steps: nextSteps };
+    }
+  };
+
   const next = () => {
+    commit();
     setFeedback(null);
     const now = live.current;
     if (now.index + 1 >= now.steps.length) finish();
@@ -295,7 +399,7 @@ export function Session({ focusLessonId, onAgain }: { focusLessonId?: string; on
   };
 
   const answer = (o: Outcome) => {
-    if (!step || !exercise || exercise.kind === 'match' || feedback) return;
+    if (!step || !exercise || exercise.kind === 'match' || feedback || pending.current) return;
     const ex = exercise;
     const wrong = o.verdict === 'wrong';
     const graded = !step.retry;
@@ -304,36 +408,38 @@ export function Session({ focusLessonId, onAgain }: { focusLessonId?: string; on
       gradeFor(o.verdict, {
         production: ex.production,
         elapsedMs: Date.now() - shownAt.current,
-        answerWords: ex.kind === 'type' ? ex.answerWords : ex.kind === 'unscramble' ? ex.tiles.length : 1,
-        // Fill-in sentences are asked without an introduction: getting one
+        answerWords: ex.kind === 'type' ? ex.answerWords : ex.kind === 'unscramble' ? ex.tiles.length - ex.traps : 1,
+        // Practice sentences are asked without an introduction: getting one
         // right at once the very first time means it was already known.
-        firstSight: step.isNew && !step.retry && catalog.items.get(ex.itemId)?.type === 'cloze',
+        firstSight: step.isNew && !step.retry && !needsIntro(catalog.items.get(ex.itemId) as StudyItem),
       });
     const xp = graded ? xpForAnswer(ex.xpKind, o.verdict, combo) : 0;
-    recordAnswers([{ itemId: ex.itemId, grade, xp, variant: ex.variant, graded }]);
+    pending.current = { itemId: ex.itemId, variant: ex.variant, xpKind: ex.xpKind, grade, xp, graded, wrong, comboBefore: combo };
 
-    const s = stats.current;
-    if (graded) {
-      s.answers++;
-      s.xp += xp;
-      if (!wrong) s.correct++;
-    }
-    if (wrong) {
-      s.missed.add(ex.itemId);
-      setSteps(withRetry(steps, index));
-    }
     setCombo(wrong ? 0 : combo + 1);
     if (wrong) sfx.wrong();
     else if (o.verdict === 'exact') sfx.correct();
     else sfx.almost();
 
     if (o.selfRated) {
-      // Flashcards have already shown the answer: move straight on.
+      // Flashcards and open answers have already shown the answer: move straight on.
       setTimeout(next, 250);
       return;
     }
     setFeedback({ outcome: o, ex, xp, praise: PRAISE[Math.floor(Math.random() * PRAISE.length)] });
-    if (settings.peek().autoSpeak) speak(ex.answer.fr);
+    if (settings.peek().autoSpeak) speak(o.expected ?? ex.answer.fr);
+  };
+
+  /** "My answer was right too": counts it as right, with no second try. */
+  const override = () => {
+    const p = pending.current;
+    if (!p || !feedback) return;
+    p.grade = 'good';
+    p.wrong = false;
+    p.xp = p.graded ? xpForAnswer(p.xpKind, 'exact', p.comboBefore) : 0;
+    setCombo(p.comboBefore + 1);
+    setFeedback({ ...feedback, xp: p.xp, outcome: { ...feedback.outcome, verdict: 'exact', overridden: true } });
+    sfx.correct();
   };
 
   /** "I already know this" on a new item: schedule it far ahead, skip its question, offer another. */
@@ -470,7 +576,7 @@ export function Session({ focusLessonId, onAgain }: { focusLessonId?: string; on
           </Button>
         </footer>
       )}
-      {feedback && <FeedbackSheet feedback={feedback} retry={!!step.retry} onNext={next} />}
+      {feedback && <FeedbackSheet feedback={feedback} retry={!!step.retry} onNext={next} onOverride={override} />}
 
       {leaving && (
         <div class="dialog-backdrop" onClick={() => setLeaving(false)}>
@@ -478,7 +584,13 @@ export function Session({ focusLessonId, onAgain }: { focusLessonId?: string; on
             <h2>Leave this session?</h2>
             <p>Your answers so far are saved. The streak only counts once a session is finished.</p>
             <div class="dialog-actions">
-              <Button kind="ghost" onClick={() => navigate({ name: 'today' })}>
+              <Button
+                kind="ghost"
+                onClick={() => {
+                  commit();
+                  navigate({ name: 'today' });
+                }}
+              >
                 Leave
               </Button>
               <Button onClick={() => setLeaving(false)}>Keep going</Button>

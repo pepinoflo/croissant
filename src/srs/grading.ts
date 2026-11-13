@@ -93,8 +93,8 @@ function compare(input: string, accepted: string[], allowTypos: boolean): CheckR
   if (allowTypos) {
     for (const a of accepted) {
       const fa = fold(a);
-      // One slip is forgiven from six letters up, two from fourteen.
-      const budget = fa.length >= 14 ? 2 : fa.length >= 6 ? 1 : 0;
+      // One slip is forgiven from six letters up, two from fourteen, three in a long sentence.
+      const budget = fa.length >= 40 ? 3 : fa.length >= 14 ? 2 : fa.length >= 6 ? 1 : 0;
       if (budget > 0 && levenshtein(fa, f) <= budget) return { verdict: 'typo', expected: a };
     }
   }
@@ -126,7 +126,57 @@ export function checkAnswer(input: string, accepted: string[], opts: CheckOption
       if (r) return r;
     }
   }
-  return { verdict: 'wrong', expected: accepted[0] };
+  return { verdict: 'wrong', expected: closest(input, accepted) };
+}
+
+/** The accepted answer nearest to what was typed (the first one when nothing was typed). */
+export function closest(input: string, accepted: string[]): string {
+  const f = fold(input);
+  if (!f || accepted.length < 2) return accepted[0];
+  let best = accepted[0];
+  let bestDistance = Infinity;
+  for (const a of accepted) {
+    const d = levenshtein(fold(a), f);
+    if (d < bestDistance) {
+      best = a;
+      bestDistance = d;
+    }
+  }
+  return best;
+}
+
+export type DiffPart = { word: string; ok: boolean };
+
+/**
+ * Word-by-word comparison of an answer with the expected sentence: each word of
+ * the expected sentence is marked ok when the answer has it, in the same order
+ * (accents ignored, since those are corrected separately).
+ */
+export function diffWords(input: string, expected: string): DiffPart[] {
+  const want = expected.split(/\s+/).filter(Boolean);
+  // "vas-tu" folds to two parts, "vas tu"; a word is right when all its parts are.
+  const parts: { key: string; word: number }[] = [];
+  want.forEach((w, word) => fold(w).split(' ').filter(Boolean).forEach((key) => parts.push({ key, word })));
+  const got = fold(input).split(' ').filter(Boolean);
+  const n = got.length;
+  const m = parts.length;
+  // Longest common subsequence.
+  const dp: number[][] = Array.from({ length: n + 1 }, () => new Array<number>(m + 1).fill(0));
+  for (let i = n - 1; i >= 0; i--) {
+    for (let j = m - 1; j >= 0; j--) {
+      dp[i][j] = got[i] === parts[j].key ? dp[i + 1][j + 1] + 1 : Math.max(dp[i + 1][j], dp[i][j + 1]);
+    }
+  }
+  const matched = new Array<boolean>(m).fill(false);
+  for (let i = 0, j = 0; i < n && j < m; ) {
+    if (got[i] === parts[j].key) {
+      matched[j] = true;
+      i++;
+      j++;
+    } else if (dp[i + 1][j] >= dp[i][j + 1]) i++;
+    else j++;
+  }
+  return want.map((word, k) => ({ word, ok: parts.every((p, j) => p.word !== k || matched[j]) }));
 }
 
 export function isAccepted(verdict: Verdict): boolean {

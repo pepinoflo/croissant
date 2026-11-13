@@ -3,7 +3,7 @@
 import { ConjugationTable, GrammarCard } from '../components/cards';
 import { Bar, Button, Fr, Icon, Picture, SpeakButton } from '../components/ui';
 import { grammarOf, studyItemsOf } from '../content/catalog';
-import { clozeParts, conjugationTitle, pretty, vocabDisplay } from '../content/french';
+import { canonical, clozeParts, conjugationTitle, pretty, vocabDisplay } from '../content/french';
 import { catalog } from '../content/load';
 import type { Lesson, StudyItem } from '../content/types';
 import { stageOf, type Stage } from '../srs/scheduler';
@@ -96,6 +96,29 @@ function Row({ item }: { item: StudyItem }) {
           <span class="row-en">{item.en}</span>
         </span>
         <SpeakButton text={parts.full} />
+      </li>
+    );
+  }
+  if (item.type === 'sentence' || item.type === 'transform' || item.type === 'question') {
+    const fr = item.type === 'question' ? item.fr : canonical(item.fr);
+    return (
+      <li class="row">
+        {dot}
+        <span class="row-main">
+          {item.type === 'transform' && (
+            <span class="row-from">
+              <span lang="fr">{pretty(item.from)}</span> → <span class="quiet">{pretty(item.task)}</span>
+            </span>
+          )}
+          <Fr>{fr}</Fr>
+          <span class="row-en">{item.en}</span>
+          {item.type === 'question' && (
+            <span class="row-model">
+              e.g. <span lang="fr">{pretty(item.models[0])}</span>
+            </span>
+          )}
+        </span>
+        <SpeakButton text={fr} />
       </li>
     );
   }

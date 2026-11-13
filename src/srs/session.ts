@@ -3,7 +3,7 @@
 
 import type { Catalog } from '../content/catalog';
 import { vocabDisplay } from '../content/french';
-import type { StudyItem } from '../content/types';
+import { needsIntro, type StudyItem } from '../content/types';
 import type { SessionSize } from '../storage/model';
 import { isDue, overdueDays, retrievability, type CardState } from './scheduler';
 
@@ -189,8 +189,8 @@ export function planSession(opts: PlanOptions): Plan {
     steps.push({ kind: 'quiz', itemId: item.id, isNew: true });
   };
   for (const item of fresh) {
-    if (item.type === 'cloze') {
-      // Fill-in-the-blank sentences need no introduction: the question is the lesson.
+    if (!needsIntro(item)) {
+      // Fill-in-the-blank and practice sentences need no introduction: the question is the lesson.
       quizNew(item);
     } else {
       steps.push({ kind: 'intro', itemId: item.id, isNew: true });
@@ -239,7 +239,7 @@ export function nextUnseen(
 export function withNewItem(steps: Step[], index: number, item: StudyItem): Step[] {
   const next = [...steps];
   const quiz: Step = { kind: 'quiz', itemId: item.id, isNew: true };
-  if (item.type === 'cloze') {
+  if (!needsIntro(item)) {
     next.splice(Math.min(index + 1, next.length), 0, quiz);
     return next;
   }

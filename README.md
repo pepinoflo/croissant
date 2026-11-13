@@ -118,11 +118,13 @@ Scheduling uses **FSRS**, the algorithm behind modern Anki. It tracks how well e
 
 Answers are graded automatically: wrong → comes back tomorrow; right apart from an accent, a typo or the article → accepted, the correct spelling is shown, and it returns a little sooner; right → normal interval; right, typed from memory and without hesitation → a longer interval.
 
-The kind of exercise follows how well an item is known: first recognising it (multiple choice, pictures, flashcards), then recalling it with support (listening, building the sentence from tiles, masculine or feminine), then producing it (typing, dictation). Sessions also adapt: more new items when recent answers are mostly right and little is due, fewer when she is struggling, none while a backlog of reviews is waiting.
+The kind of exercise follows how well an item is known, and moves quickly to producing French, since understanding is the easy part for her: first recognising or building it (multiple choice, pictures, word tiles), then producing it with support (a word bank with trap words such as a wrong ending or article, saying it out loud, typing it), then producing it freely (writing whole sentences, dictation). One good answer is usually enough to move on.
+
+Each lesson also has practice material that goes beyond the notes: sentences to translate into French, sentences to rewrite (negative, another tense, another person) and open questions to answer in her own words, compared with example answers. Typed sentences are corrected word by word, and since a sentence can often be said several ways, a wrong verdict can be overruled with *My answer was right too*. Sessions also adapt: more new items when recent answers are mostly right and little is due, fewer when she is struggling, none while a backlog of reviews is waiting.
 
 ### The lesson format
 
-`lessons/schema/lesson.v1.schema.json` is the reference. In short, a lesson is a list of items of five kinds:
+`lessons/schema/lesson.v1.schema.json` is the reference. In short, a lesson is a list of items of eight kinds:
 
 ```json
 { "id": "l05.v.poireau", "type": "vocab", "fr": "poireau", "en": "leek", "pos": "noun", "gender": "m", "image": "img/vocab/poireau.svg" }
@@ -130,7 +132,12 @@ The kind of exercise follows how well an item is known: first recognising it (mu
 { "id": "l02.c.aller-present", "type": "conjugation", "verb": "aller", "en": "to go", "tense": "présent", "forms": { "je": "vais", "tu": "vas", "il": "va", "nous": "allons", "vous": "allez", "ils": "vont" } }
 { "id": "l10.x.ma-mere", "type": "cloze", "fr": "Je téléphone à {{ma}} mère.", "en": "I phone my mother.", "distractors": ["mon", "mes", "ton"] }
 { "id": "l10.g.possessifs", "type": "grammar", "title": "Les adjectifs possessifs", "body": "…" }
+{ "id": "l01.s.ou-es-tu-alle", "type": "sentence", "fr": "Où es-tu allé le week-end dernier ?", "en": "Where did you go last weekend?", "frAlt": ["Tu es [allé|allée] où le week-end dernier ?"], "traps": ["as", "aller"] }
+{ "id": "l08.t.imp-faire-ski", "type": "transform", "task": "Mets la phrase à l'imparfait.", "taskEn": "Put the sentence in the imparfait.", "from": "Je fais du ski.", "fr": "Je faisais du ski.", "en": "I used to go skiing." }
+{ "id": "l06.q.ce-week-end", "type": "question", "fr": "Qu'est-ce que tu vas faire ce week-end ?", "en": "What are you going to do this weekend?", "models": ["Samedi, je vais faire du shopping.", "Je vais visiter un musée."] }
 ```
+
+In sentences, `[a|b]` lists variants that are all accepted (the first is displayed), and `traps` are wrong words added to the word bank.
 
 You can edit a lesson by hand (fix a translation, add a note, add items). Run `npm run check` afterwards. The one thing never to do is change or remove an existing `id`.
 

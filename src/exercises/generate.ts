@@ -3,6 +3,8 @@
 
 import type { Catalog } from '../content/catalog';
 import {
+  acceptedSentences,
+  canonical,
   clozeParts,
   PRONOUN_LABEL,
   subjectFor,
@@ -16,7 +18,10 @@ import {
   type ConjugationItem,
   type Person,
   type PhraseItem,
+  type QuestionItem,
+  type SentenceItem,
   type StudyItem,
+  type TransformItem,
   type VocabItem,
 } from '../content/types';
 import { fold, normalize } from '../srs/grading';
@@ -24,12 +29,14 @@ import type { CardState } from '../srs/scheduler';
 import { shuffle, type Rng } from '../srs/session';
 import type {
   Answer,
+  Prompt,
   ChoiceExercise,
   ChoiceOption,
   FlashcardExercise,
   GenderExercise,
   MatchExercise,
   Media,
+  OpenExercise,
   QuizExercise,
   TypeExercise,
   UnscrambleExercise,
@@ -55,13 +62,19 @@ const frOf = (item: VocabItem | PhraseItem): string => (item.type === 'vocab' ? 
 
 const wordCount = (s: string): number => s.trim().split(/\s+/).length;
 
-/** 0 = recognise, 1 = recall with support, 2 = produce. */
+/**
+ * 0 = recognise or build with help, 1 = recall, 2 = produce freely.
+ * She understands far more than she can say, so items move on to producing
+ * French quickly: one good answer is usually enough to leave level 0.
+ */
 export function difficultyLevel(card: CardState | undefined, ctx: Pick<GenContext, 'rng' | 'recentAccuracy'>): number {
-  let level = !card || card.reps === 0 || card.stability < 1.5 ? 0 : card.stability < 7 ? 1 : 2;
+  let level = !card || card.reps === 0 || card.stability < 1 ? 0 : card.stability < 4 ? 1 : 2;
+  // Just forgotten (a lapse always comes back the next day): one step back, whatever the stability says.
+  if (card && card.lapses > 0 && card.scheduledDays <= 1) level = Math.min(level, 1);
   const acc = ctx.recentAccuracy;
   if (acc !== null && card && card.reps > 0) {
-    if (acc >= 0.9 && ctx.rng() < 0.3) level++;
-    else if (acc < 0.65 && ctx.rng() < 0.5) level--;
+    if (acc >= 0.85 && ctx.rng() < 0.5) level++;
+    else if (acc < 0.6 && ctx.rng() < 0.5) level--;
   }
   return Math.max(0, Math.min(2, level));
 }
@@ -77,56 +90,82 @@ function hasPictureRivals(item: VocabItem, ctx: GenContext): boolean {
   return false;
 }
 
+/** Number of words of the displayed sentence that become tiles. */
+const tileCount = (fr: string): number => tokenize(canonical(fr)).length;
+
 /** The formats an item can take at a given level, with their relative weights. */
 export function variantsFor(item: StudyItem, level: number, ctx: GenContext): Weighted[] {
   const speak = ctx.canSpeak;
   const out: Weighted[] = [];
   if (item.type === 'vocab') {
     const pic = !!mediaOf(item);
+    const rivals = pic && hasPictureRivals(item, ctx);
     const genderable = item.pos === 'noun' && (item.gender === 'm' || item.gender === 'f');
     if (level === 0) {
-      out.push(['vocab:fr-en', 3], ['vocab:flash-fr', 1]);
-      if (pic) out.push(['vocab:picture-word', 3]);
+      out.push(['vocab:en-fr', 3], ['vocab:fr-en', 1], ['vocab:flash-en', 1]);
+      if (pic) out.push(['vocab:picture-word', 2]);
     } else if (level === 1) {
-      out.push(['vocab:en-fr', 3], ['vocab:flash-en', 1]);
-      if (speak) out.push(['vocab:listen-en', 2]);
-      if (pic) out.push(['vocab:picture-word', 1]);
-      if (pic && hasPictureRivals(item, ctx)) {
-        out.push(['vocab:word-picture', 2]);
-        if (speak) out.push(['vocab:listen-picture', 2]);
-      }
+      out.push(['vocab:type', 3], ['vocab:en-fr', 1], ['vocab:flash-en', 1]);
+      if (speak) out.push(['vocab:dictation', 1]);
+      if (pic) out.push(['vocab:picture-type', 2]);
+      if (rivals) out.push(['vocab:word-picture', 1]);
+      if (rivals && speak) out.push(['vocab:listen-picture', 1]);
       if (genderable) out.push(['vocab:gender', 2]);
     } else {
-      out.push(['vocab:type', 4], ['vocab:en-fr', 1]);
+      out.push(['vocab:type', 4]);
       if (speak) out.push(['vocab:dictation', 2]);
       if (pic) out.push(['vocab:picture-type', 3]);
       if (genderable) out.push(['vocab:gender', 1]);
     }
   } else if (item.type === 'phrase') {
-    const words = tokenize(item.fr).length;
-    const tiles = item.scramble !== false && words >= 3 && words <= 9;
+    const words = tileCount(item.fr);
+    const tiles = item.scramble !== false && words >= 3 && words <= 14;
     if (level === 0) {
-      out.push(['phrase:fr-en', 3], ['phrase:flash-fr', 1]);
-      if (speak) out.push(['phrase:listen-en', 1]);
+      out.push(['phrase:en-fr', 2], ['phrase:fr-en', 1], ['phrase:say', 1]);
+      if (tiles) out.push(['phrase:tiles', 3]);
     } else if (level === 1) {
-      out.push(['phrase:en-fr', 2], ['phrase:flash-en', 1]);
-      if (tiles) out.push(['phrase:tiles', 4]);
-      if (speak) out.push(['phrase:listen-en', 2]);
+      out.push(['phrase:type', 3], ['phrase:say', 2], ['phrase:en-fr', 1]);
+      if (tiles) out.push(['phrase:bank', 4]);
+      if (tiles && speak) out.push(['phrase:listen-tiles', 1]);
     } else {
-      out.push(['phrase:en-fr', 1]);
-      if (tiles) out.push(['phrase:tiles', 2]);
-      if (tiles && speak) out.push(['phrase:listen-tiles', 3]);
-      if (words <= 4) out.push(['phrase:type', 3]);
-      if (speak && words <= 6) out.push(['phrase:dictation', 2]);
+      out.push(['phrase:type', 5], ['phrase:say', 2]);
+      if (tiles) out.push(['phrase:bank', 2]);
+      if (speak && words <= 12) out.push(['phrase:dictation', 2]);
     }
   } else if (item.type === 'conjugation') {
-    if (level === 0) out.push(['conj:choice', 1]);
-    else if (level === 1) out.push(['conj:choice', 1], ['conj:type', 2]);
+    if (level === 0) out.push(['conj:choice', 2], ['conj:type', 1]);
+    else if (level === 1) out.push(['conj:choice', 1], ['conj:type', 3]);
     else out.push(['conj:type', 1]);
+  } else if (item.type === 'cloze') {
+    if (item.choiceOnly) out.push(['cloze:choice', 1]);
+    else if (level === 0) out.push(['cloze:choice', 2], ['cloze:type', 1]);
+    else if (level === 1) out.push(['cloze:choice', 1], ['cloze:type', 3]);
+    else out.push(['cloze:type', 1]);
+  } else if (item.type === 'sentence') {
+    const words = tileCount(item.fr);
+    const tiles = words >= 3 && words <= 16;
+    if (level === 0) {
+      out.push(['sent:say', 1]);
+      out.push(tiles ? ['sent:bank', 4] : ['sent:type', 4]);
+    } else if (level === 1) {
+      out.push(['sent:type', 4], ['sent:say', 2]);
+      if (tiles) out.push(['sent:bank', 2]);
+      if (speak) out.push(['sent:dictation', 1]);
+    } else {
+      out.push(['sent:type', 5], ['sent:say', 2]);
+      if (tiles) out.push(['sent:bank', 1]);
+      if (speak && words <= 12) out.push(['sent:dictation', 2]);
+    }
+  } else if (item.type === 'transform') {
+    const tiles = tileCount(item.fr) >= 3 && tileCount(item.fr) <= 16;
+    if (level === 0 && tiles) out.push(['trans:bank', 3], ['trans:type', 1]);
+    else {
+      out.push(['trans:type', 4]);
+      if (tiles) out.push(['trans:bank', 1]);
+    }
   } else {
-    if (level === 0 || item.choiceOnly) out.push(['cloze:choice', 1]);
-    else if (level === 1) out.push(['cloze:choice', 1], ['cloze:type', 2]);
-    else out.push(['cloze:choice', 1], ['cloze:type', 3]);
+    out.push(['q:write', 3]);
+    if (speak && level > 0) out.push(['q:listen', 2]);
   }
   return out;
 }
@@ -324,30 +363,21 @@ function buildWord(item: VocabItem | PhraseItem, variant: string, ctx: GenContex
       return ex;
     }
     case 'tiles':
-    case 'listen-tiles': {
+    case 'listen-tiles':
+    case 'bank': {
       const listen = kind === 'listen-tiles';
-      const solution = tokenize(item.fr);
-      solution[0] = lowerFirst(solution[0]);
-      const accepted = [item.fr, ...(item.frAlt ?? [])];
-      // Shuffle until the tiles do not already spell an accepted sentence.
-      let tiles = shuffle(solution, ctx.rng);
-      for (let tries = 0; tries < 12 && tilesMatch(tiles, accepted); tries++) tiles = shuffle(solution, ctx.rng);
-      if (tilesMatch(tiles, accepted)) tiles = [...solution].reverse();
-      const ex: UnscrambleExercise = {
-        kind: 'unscramble',
-        itemId: item.id,
-        variant,
-        xpKind: 'unscramble',
-        production: true,
-        prompt: listen
-          ? { instruction: 'Listen and build the sentence', speak: item.fr, audioOnly: true }
-          : { instruction: 'Build this sentence in French', text: item.en, lang: 'en' },
-        tiles,
-        accepted,
-        answer,
-      };
-      return ex;
+      const traps = kind === 'bank' ? 3 : 0;
+      const prompt: Prompt = listen
+        ? { instruction: 'Listen and build the sentence', speak: item.fr, audioOnly: true }
+        : {
+            instruction: traps ? 'Build it in French — some words are traps' : 'Build this sentence in French',
+            text: item.en,
+            lang: 'en',
+          };
+      return buildTiles(item, variant, ctx, { prompt, accepted: [item.fr, ...(item.frAlt ?? [])], traps, answer });
     }
+    case 'say':
+      return sayAloud(item.id, variant, { text: item.en }, fr, answer);
     default: {
       // type, dictation, picture-type
       const dictation = kind === 'dictation';
@@ -357,7 +387,7 @@ function buildWord(item: VocabItem | PhraseItem, variant: string, ctx: GenContex
         ? { instruction: 'Listen and type what you hear', speak: fr, audioOnly: true }
         : kind === 'picture-type'
           ? { instruction: 'Type the French word', media }
-          : { instruction: 'Type this in French', text: item.en, lang: 'en', media };
+          : { instruction: item.type === 'phrase' ? 'Write this in French' : 'Type this in French', text: item.en, lang: 'en', media };
       const ex: TypeExercise = {
         kind: 'type',
         itemId: item.id,
@@ -368,6 +398,7 @@ function buildWord(item: VocabItem | PhraseItem, variant: string, ctx: GenContex
         accepted,
         check: { allowTypos: !dictation, nounGender: noun },
         answerWords: wordCount(fr),
+        sentence: item.type === 'phrase' && wordCount(fr) >= 4,
         answer,
       };
       return ex;
@@ -486,10 +517,217 @@ function buildCloze(item: ClozeItem, variant: string, ctx: GenContext): QuizExer
   return ex;
 }
 
+// Wrong words for the word bank. Each list holds forms that are easy to mix up,
+// so the trap is a real mistake (wrong article, wrong person) rather than a random word.
+const CONFUSABLE: string[][] = [
+  ['le', 'la', 'les'],
+  ['un', 'une'],
+  ['du', 'de', 'des'],
+  ['mon', 'ma', 'mes'],
+  ['ton', 'ta', 'tes'],
+  ['son', 'sa', 'ses'],
+  ['notre', 'nos'],
+  ['votre', 'vos'],
+  ['leur', 'leurs'],
+  ['ce', 'cette', 'ces'],
+  ['au', 'aux', 'à'],
+  ['a', 'à'],
+  ['et', 'est'],
+  ['ou', 'où'],
+  ['suis', 'es', 'est', 'sommes', 'êtes', 'sont'],
+  ['ai', 'as', 'a', 'avons', 'avez', 'ont'],
+  ['vais', 'vas', 'va', 'allons', 'allez', 'vont'],
+  ['fais', 'fait', 'faisons', 'faites', 'font'],
+  ['peux', 'peut', 'pouvons', 'pouvez', 'peuvent'],
+  ['veux', 'veut', 'voulons', 'voulez', 'veulent'],
+  ['dois', 'doit', 'devons', 'devez', 'doivent'],
+  ['prends', 'prend', 'prenons', 'prenez', 'prennent'],
+  ['mets', 'met', 'mettons', 'mettez', 'mettent'],
+  ['était', 'étais', 'étaient', 'étions'],
+  ['avait', 'avais', 'avaient', 'avions'],
+  ['ne', "n'"],
+  ['qui', 'que', "qu'"],
+  ['quel', 'quelle', 'quels', 'quelles'],
+  ['beau', 'belle', 'beaux'],
+  ['petit', 'petite', 'petits'],
+  ['grand', 'grande', 'grands'],
+];
+
+// Words ending in -é or -er that are not verb forms (no -er/-é/-ez trap for them).
+const NOT_VERBS = new Set(['été', 'hier', 'hiver', 'cher', 'mer', 'premier', 'dernier', 'café', 'thé', 'clé', 'côté', 'santé', 'super', 'léger', 'entier', 'assez', 'chez', 'déjeuner', 'dîner', 'cuisiner', 'quartier', 'métier', 'papier', 'panier', 'boucher', 'boulanger', 'fermé', 'préféré']);
+
+let confusableIndex: Map<string, string[]> | null = null;
+
+function confusables(ctx: GenContext): Map<string, string[]> {
+  if (confusableIndex) return confusableIndex;
+  const index = new Map<string, Set<string>>();
+  const link = (group: string[]) => {
+    for (const w of group) {
+      const set = index.get(w) ?? new Set<string>();
+      for (const o of group) if (o !== w) set.add(o);
+      index.set(w, set);
+    }
+  };
+  CONFUSABLE.forEach(link);
+  // Every verb table of the course: "vont" tempts with "va", "allons"…
+  for (const item of ctx.catalog.study) {
+    if (item.type !== 'conjugation') continue;
+    const forms = [...new Set(PERSONS.map((p) => item.forms[p]))].filter((f) => !/\s/.test(f));
+    if (forms.length > 1) link(forms.map((f) => f.toLocaleLowerCase('fr')));
+  }
+  confusableIndex = new Map([...index].map(([k, v]) => [k, [...v]]));
+  return confusableIndex;
+}
+
+/** Same-sounding verb endings: mangé / manger / mangez. */
+function endingTraps(word: string): string[] {
+  if (word.length < 5 || NOT_VERBS.has(word)) return [];
+  const stem = /^(.+)(é|er|ez)$/.exec(word);
+  if (!stem) return [];
+  return ['é', 'er', 'ez'].filter((e) => e !== stem[2]).map((e) => stem[1] + e);
+}
+
+/**
+ * Wrong words to mix into the tiles. Written traps first, then forms easily
+ * mixed up with words of the sentence, then words from other sentences.
+ */
+export function pickTraps(solution: string[], accepted: string[], count: number, ctx: GenContext, written: string[] = []): string[] {
+  if (count <= 0) return [];
+  // Never offer a word that one of the correct answers uses.
+  const taken = new Set(accepted.flatMap((a) => tokenize(a).map(fold)));
+  const out: string[] = [];
+  const add = (w: string) => {
+    if (out.length >= count) return;
+    const k = fold(w);
+    if (!k || taken.has(k) || out.some((o) => fold(o) === k)) return;
+    out.push(w);
+  };
+  shuffle(written, ctx.rng).forEach(add);
+  const index = confusables(ctx);
+  const near: string[] = [];
+  for (const word of solution) {
+    const lower = word.toLocaleLowerCase('fr');
+    near.push(...(index.get(lower) ?? []), ...endingTraps(lower));
+  }
+  shuffle(near, ctx.rng).forEach(add);
+  if (out.length < count) {
+    const filler: string[] = [];
+    for (const other of shuffle(ctx.catalog.study, ctx.rng).slice(0, 40)) {
+      if (other.type === 'phrase' || other.type === 'sentence') filler.push(...tokenize(canonical(other.fr)).map(lowerFirst));
+    }
+    shuffle(filler, ctx.rng).forEach(add);
+  }
+  return out;
+}
+
+function buildTiles(
+  item: { id: string; fr: string },
+  variant: string,
+  ctx: GenContext,
+  spec: { prompt: Prompt; accepted: string[]; traps: number; written?: string[]; answer: Answer; xpKind?: string },
+): UnscrambleExercise {
+  const solution = tokenize(canonical(item.fr));
+  solution[0] = lowerFirst(solution[0]);
+  const extra = pickTraps(solution, spec.accepted, spec.traps, ctx, spec.written);
+  const all = [...solution, ...extra];
+  // Shuffle until the tiles do not already spell an accepted sentence.
+  let tiles = shuffle(all, ctx.rng);
+  for (let tries = 0; tries < 12 && tilesMatch(tiles, spec.accepted); tries++) tiles = shuffle(all, ctx.rng);
+  if (tilesMatch(tiles, spec.accepted)) tiles = [...all].reverse();
+  return {
+    kind: 'unscramble',
+    itemId: item.id,
+    variant,
+    xpKind: spec.xpKind ?? (extra.length ? 'bank' : 'unscramble'),
+    production: true,
+    prompt: spec.prompt,
+    tiles,
+    accepted: spec.accepted,
+    traps: extra.length,
+    answer: spec.answer,
+  };
+}
+
+function sayAloud(itemId: string, variant: string, front: { text: string; sub?: string }, fr: string, answer: Answer): FlashcardExercise {
+  return {
+    kind: 'flashcard',
+    itemId,
+    variant,
+    xpKind: 'say',
+    production: true,
+    prompt: { instruction: 'Say it out loud in French', text: front.text, lang: 'en', sub: front.sub },
+    back: { text: fr, lang: 'fr' },
+    answer,
+  };
+}
+
+function writeSentence(itemId: string, variant: string, prompt: Prompt, accepted: string[], answer: Answer, allowTypos = true): TypeExercise {
+  return {
+    kind: 'type',
+    itemId,
+    variant,
+    xpKind: 'write',
+    production: true,
+    prompt,
+    accepted,
+    check: { allowTypos },
+    answerWords: wordCount(accepted[0]),
+    sentence: true,
+    answer,
+  };
+}
+
+/** A sentence to translate into French, or one to rewrite. */
+function buildSentence(item: SentenceItem | TransformItem, variant: string, level: number, ctx: GenContext): QuizExercise {
+  const kind = variant.split(':')[1];
+  const accepted = acceptedSentences(item.fr, item.frAlt);
+  const fr = accepted[0];
+  const answer: Answer = { fr, en: item.en, note: item.note };
+  const prompt: Prompt =
+    item.type === 'transform'
+      ? { instruction: item.task, text: item.from, lang: 'fr', speak: item.from, sub: item.taskEn }
+      : { instruction: 'Write this in French', text: item.en, lang: 'en', sub: item.hint };
+  switch (kind) {
+    case 'bank':
+      return buildTiles(item, variant, ctx, {
+        prompt: item.type === 'transform' ? prompt : { ...prompt, instruction: 'Build it in French — some words are traps' },
+        accepted,
+        traps: 2 + level,
+        written: item.traps,
+        answer,
+      });
+    case 'say':
+      return sayAloud(item.id, variant, { text: item.en, sub: item.type === 'sentence' ? item.hint : undefined }, fr, answer);
+    case 'dictation':
+      return writeSentence(item.id, variant, { instruction: 'Listen and write the sentence', speak: fr, audioOnly: true }, accepted, answer);
+    default:
+      // A rewrite often changes one letter (allons → allions): no slip is forgiven there.
+      return writeSentence(item.id, variant, prompt, accepted, answer, item.type !== 'transform');
+  }
+}
+
+function buildQuestion(item: QuestionItem, variant: string): OpenExercise {
+  const listen = variant === 'q:listen';
+  return {
+    kind: 'open',
+    itemId: item.id,
+    variant,
+    xpKind: 'open',
+    production: true,
+    prompt: listen
+      ? { instruction: 'Listen, then answer in French', speak: item.fr, audioOnly: true, sub: item.hint }
+      : { instruction: 'Answer in a full sentence', text: item.fr, lang: 'fr', speak: item.fr, sub: item.hint },
+    models: item.models,
+    answer: { fr: item.fr, en: item.en, note: item.note },
+  };
+}
+
 /** Builds one specific format for an item. */
-export function buildExercise(item: StudyItem, variant: string, ctx: GenContext): QuizExercise {
+export function buildExercise(item: StudyItem, variant: string, ctx: GenContext, level = 1): QuizExercise {
   if (item.type === 'conjugation') return buildConjugation(item, variant, ctx);
   if (item.type === 'cloze') return buildCloze(item, variant, ctx);
+  if (item.type === 'sentence' || item.type === 'transform') return buildSentence(item, variant, level, ctx);
+  if (item.type === 'question') return buildQuestion(item, variant);
   return buildWord(item, variant, ctx);
 }
 
@@ -498,7 +736,7 @@ export function generateExercise(item: StudyItem, ctx: GenContext, opts: { easie
   const card = ctx.cards.get(item.id);
   const level = opts.easier ? 0 : difficultyLevel(card, ctx);
   const variant = pickWeighted(variantsFor(item, level, ctx), ctx.rng, card?.lastVariant);
-  return buildExercise(item, variant, ctx);
+  return buildExercise(item, variant, ctx, level);
 }
 
 export function generateMatch(items: (VocabItem | PhraseItem)[], rng: Rng): MatchExercise {

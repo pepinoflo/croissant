@@ -28,6 +28,9 @@
           { "$ref": "#/definitions/phrase" },
           { "$ref": "#/definitions/conjugation" },
           { "$ref": "#/definitions/cloze" },
+          { "$ref": "#/definitions/sentence" },
+          { "$ref": "#/definitions/transform" },
+          { "$ref": "#/definitions/question" },
           { "$ref": "#/definitions/grammar" }
         ]
       }
@@ -36,16 +39,16 @@
   "definitions": {
     "id": {
       "type": "string",
-      "pattern": "^l[0-9]{2}\\.[vpcxg]\\.[a-z0-9]+(-[a-z0-9]+)*$",
-      "description": "l<lesson number>.<v|p|c|x|g>.<slug> — v vocab, p phrase, c conjugation, x cloze (exercise), g grammar."
+      "pattern": "^l[0-9]{2}\\.[vpcxstqg]\\.[a-z0-9]+(-[a-z0-9]+)*$",
+      "description": "l<lesson number>.<letter>.<slug> — v vocab, p phrase, c conjugation, x cloze (exercise), s sentence to translate, t transformation, q open question, g grammar."
     },
     "text": { "type": "string", "minLength": 1 },
-    "textList": { "type": "array", "minItems": 1, "uniqueItems": true, "items": { "$ref": "#/definitions/text" } },
+    "textList": { "type": "array", "minItems": 1, "uniqueItems": true, "items": {"$ref": "#/definitions/text"} },
     "example": {
       "type": "object",
       "additionalProperties": false,
       "required": ["fr", "en"],
-      "properties": { "fr": { "$ref": "#/definitions/text" }, "en": { "$ref": "#/definitions/text" } }
+      "properties": { "fr": {"$ref": "#/definitions/text"}, "en": {"$ref": "#/definitions/text"} }
     },
     "vocab": {
       "type": "object",
@@ -64,14 +67,21 @@
           "description": "Article shown with the noun when un/une (or des for plurals) is not the natural choice."
         },
         "emoji": { "$ref": "#/definitions/text", "description": "Picture for concrete words. Must clearly show the thing." },
-        "image": { "type": "string", "pattern": "^img/vocab/[a-z0-9-]+\\.svg$", "description": "Custom picture under public/, when no emoji fits." },
+        "image": {
+          "type": "string",
+          "pattern": "^img/vocab/[a-z0-9-]+\\.svg$",
+          "description": "Custom picture under public/, when no emoji fits."
+        },
         "frAlt": { "$ref": "#/definitions/textList", "description": "Other French answers accepted when typing." },
-        "enAlt": { "$ref": "#/definitions/textList", "description": "Other English meanings; keeps synonyms out of multiple-choice options." },
+        "enAlt": {
+          "$ref": "#/definitions/textList",
+          "description": "Other English meanings; keeps synonyms out of multiple-choice options."
+        },
         "example": { "$ref": "#/definitions/example" },
         "group": { "$ref": "#/definitions/text" },
         "note": { "$ref": "#/definitions/text" }
       },
-      "if": { "properties": { "pos": { "const": "noun" } } },
+      "if": { "properties": {"pos": {"const": "noun"}} },
       "then": { "required": ["gender"] }
     },
     "phrase": {
@@ -100,7 +110,18 @@
         "type": { "const": "conjugation" },
         "verb": { "$ref": "#/definitions/text", "description": "Infinitive." },
         "en": { "$ref": "#/definitions/text" },
-        "tense": { "enum": ["présent", "futur proche", "futur simple", "passé composé", "imparfait", "conditionnel", "impératif", "subjonctif"] },
+        "tense": {
+          "enum": [
+            "présent",
+            "futur proche",
+            "futur simple",
+            "passé composé",
+            "imparfait",
+            "conditionnel",
+            "impératif",
+            "subjonctif"
+          ]
+        },
         "forms": {
           "type": "object",
           "additionalProperties": false,
@@ -127,7 +148,11 @@
       "properties": {
         "id": { "$ref": "#/definitions/id" },
         "type": { "const": "cloze" },
-        "fr": { "type": "string", "pattern": "^[^{}]*\\{\\{[^{}]+\\}\\}[^{}]*$", "description": "Sentence with exactly one {{answer}}." },
+        "fr": {
+          "type": "string",
+          "pattern": "^[^{}]*\\{\\{[^{}]+\\}\\}[^{}]*$",
+          "description": "Sentence with exactly one {{answer}}."
+        },
         "en": { "$ref": "#/definitions/text", "description": "Translation of the complete sentence." },
         "hint": { "$ref": "#/definitions/text", "description": "Shown beside the blank, usually the infinitive." },
         "accept": { "$ref": "#/definitions/textList", "description": "Other correct answers." },
@@ -145,6 +170,73 @@
         "note": { "$ref": "#/definitions/text" }
       }
     },
+    "sentence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "type", "fr", "en"],
+      "description": "A sentence to say or write in French from its English meaning. Practice material built from the lesson's words and grammar, not necessarily from the notes.",
+      "properties": {
+        "id": { "$ref": "#/definitions/id" },
+        "type": { "const": "sentence" },
+        "fr": {
+          "$ref": "#/definitions/text",
+          "description": "May hold alternatives in square brackets: \"Je suis [allée|allé] au marché.\" The first option is displayed; an empty option makes a word optional."
+        },
+        "en": { "$ref": "#/definitions/text" },
+        "frAlt": {
+          "$ref": "#/definitions/textList",
+          "description": "Other correct translations (alternatives in brackets allowed)."
+        },
+        "hint": { "$ref": "#/definitions/text", "description": "Short tip in English shown with the prompt." },
+        "traps": {
+          "$ref": "#/definitions/textList",
+          "description": "Single wrong words added to the word bank: a wrong ending, the wrong article."
+        },
+        "grammar": { "$ref": "#/definitions/id" },
+        "group": { "$ref": "#/definitions/text" },
+        "note": { "$ref": "#/definitions/text" }
+      }
+    },
+    "transform": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "type", "task", "taskEn", "from", "fr", "en"],
+      "description": "Rewrite a sentence: negative, another tense, another person, a question.",
+      "properties": {
+        "id": { "$ref": "#/definitions/id" },
+        "type": { "const": "transform" },
+        "task": { "$ref": "#/definitions/text", "description": "The instruction in French." },
+        "taskEn": { "$ref": "#/definitions/text", "description": "The instruction in English." },
+        "from": { "$ref": "#/definitions/text", "description": "The sentence to start from." },
+        "fr": {
+          "$ref": "#/definitions/text",
+          "description": "The rewritten sentence. May hold alternatives in square brackets: \"Je suis [allée|allé] au marché.\" The first option is displayed; an empty option makes a word optional."
+        },
+        "en": { "$ref": "#/definitions/text", "description": "Translation of the rewritten sentence." },
+        "frAlt": { "$ref": "#/definitions/textList" },
+        "traps": { "$ref": "#/definitions/textList" },
+        "grammar": { "$ref": "#/definitions/id" },
+        "group": { "$ref": "#/definitions/text" },
+        "note": { "$ref": "#/definitions/text" }
+      }
+    },
+    "question": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "type", "fr", "en", "models"],
+      "description": "An open question she answers in her own words, then compares with model answers.",
+      "properties": {
+        "id": { "$ref": "#/definitions/id" },
+        "type": { "const": "question" },
+        "fr": { "$ref": "#/definitions/text", "description": "The question in French." },
+        "en": { "$ref": "#/definitions/text" },
+        "hint": { "$ref": "#/definitions/text", "description": "How to build the answer, in English." },
+        "models": { "$ref": "#/definitions/textList", "description": "Two or three example answers." },
+        "grammar": { "$ref": "#/definitions/id" },
+        "group": { "$ref": "#/definitions/text" },
+        "note": { "$ref": "#/definitions/text" }
+      }
+    },
     "grammar": {
       "type": "object",
       "additionalProperties": false,
@@ -154,17 +246,24 @@
         "type": { "const": "grammar" },
         "title": { "$ref": "#/definitions/text" },
         "titleEn": { "$ref": "#/definitions/text" },
-        "body": { "$ref": "#/definitions/text", "description": "Explanation in English. Blank lines separate paragraphs; **bold** is supported." },
+        "body": {
+          "$ref": "#/definitions/text",
+          "description": "Explanation in English. Blank lines separate paragraphs; **bold** is supported."
+        },
         "table": {
           "type": "object",
           "additionalProperties": false,
           "required": ["headers", "rows"],
           "properties": {
-            "headers": { "type": "array", "minItems": 2, "items": { "type": "string" } },
-            "rows": { "type": "array", "minItems": 1, "items": { "type": "array", "minItems": 2, "items": { "type": "string" } } }
+            "headers": { "type": "array", "minItems": 2, "items": {"type": "string"} },
+            "rows": {
+              "type": "array",
+              "minItems": 1,
+              "items": { "type": "array", "minItems": 2, "items": {"type": "string"} }
+            }
           }
         },
-        "examples": { "type": "array", "minItems": 1, "items": { "$ref": "#/definitions/example" } },
+        "examples": { "type": "array", "minItems": 1, "items": {"$ref": "#/definitions/example"} },
         "group": { "$ref": "#/definitions/text" },
         "note": { "$ref": "#/definitions/text" }
       }
