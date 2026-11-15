@@ -165,7 +165,17 @@ describe('the validator catches', () => {
 
   it('a file name, id and order that disagree', () => {
     expect(check([{ ...minimal(), file: 'l01-other.json' }]).errors.join('\n')).toMatch(/file name/);
-    expect(check([minimal({ order: 3 })]).errors.join('\n')).toMatch(/order/);
+    expect(check([minimal({ order: 3 })]).errors.join('\n')).toMatch(/without gaps/);
+  });
+
+  it('two lessons with the same number or the same order, but not a lesson moved elsewhere', () => {
+    const a = minimal();
+    const sameNumber = minimal({ id: 'l01-again', order: 2 }, [{ id: 'l01.v.lait', type: 'vocab', fr: 'lait', en: 'milk', pos: 'noun', gender: 'm' }]);
+    expect(check([a, sameNumber]).errors.join('\n')).toMatch(/number 01 is already used/);
+    const sameOrder = minimal({ id: 'l02-other', order: 1 }, [{ id: 'l02.v.lait', type: 'vocab', fr: 'lait', en: 'milk', pos: 'noun', gender: 'm' }]);
+    expect(check([a, sameOrder]).errors.join('\n')).toMatch(/order 1 is already used/);
+    const swapped = [minimal({ order: 2 }), minimal({ id: 'l02-other', order: 1 }, [{ id: 'l02.v.lait', type: 'vocab', fr: 'lait', en: 'milk', pos: 'noun', gender: 'm' }])];
+    expect(check(swapped).errors).toEqual([]);
   });
 
   it('a cloze without a blank, or with two', () => {

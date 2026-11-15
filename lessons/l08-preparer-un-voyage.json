@@ -1,9 +1,9 @@
 {
   "schema": 1,
-  "id": "l08-planifier-un-voyage",
-  "order": 8,
-  "title": "Où on avait l'habitude d'aller",
-  "titleEn": "Planning a trip, and trips you used to take",
+  "id": "l08-preparer-un-voyage",
+  "order": 6,
+  "title": "Préparer un voyage",
+  "titleEn": "Booking, getting there, and the trips you used to take",
   "emoji": "🗺️",
   "summary": "Preparing a trip from booking to arriving, what you do once you are there, and talking about where you used to go.",
   "items": [

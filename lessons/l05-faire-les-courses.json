@@ -1,9 +1,9 @@
 {
   "schema": 1,
-  "id": "l05-les-magasins",
-  "order": 5,
-  "title": "Les magasins",
-  "titleEn": "Shops, food and quantities",
+  "id": "l05-faire-les-courses",
+  "order": 4,
+  "title": "Faire les courses",
+  "titleEn": "Shops, food, quantities and prices",
   "emoji": "🛒",
   "summary": "The shops, fruit, vegetables and everyday food, asking for a quantity and a price, and listing what a recipe needs.",
   "items": [

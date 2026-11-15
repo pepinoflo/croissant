@@ -24,7 +24,7 @@ The learner is at about **A2**, reads **English**, and reviews on an iPad. She u
 
 - **Raw notes are never committed.** `lessons/inbox/` and `lessons/archive/` are git-ignored. Never copy note files, photos or their text verbatim into anything that is committed, and never `git add -f` them. Notes that were pasted are never written to a file at all.
 - **Nothing personal is published.** The site and the repository are public. Before anything is written to a lesson file, generalise every personal detail (step 4).
-- **Item ids are permanent.** Progress on the iPad is stored against them. Never rename, reuse or delete an id in an existing lesson, and never renumber lessons. `lessons/ids.lock.json` and the tests enforce this.
+- **Item ids are permanent.** Progress on the iPad is stored against them. Never rename, reuse or delete an id in an existing lesson, and never change the number of a lesson (its `order` may change, its number may not). `lessons/ids.lock.json` and the tests enforce this.
 - **Do not write the lesson file until the user has answered the questions in step 5.**
 
 ## 1. Gather the notes
@@ -39,7 +39,12 @@ For handwriting, first transcribe exactly what is on the page, marking anything 
 
 ## 2. Learn the format
 
-Read `lessons/schema/lesson.v1.schema.json` and the most recent `lessons/lNN-*.json` as a model of style and density. The next lesson number is the highest existing `order` + 1.
+Read `lessons/schema/lesson.v1.schema.json` and the most recent lesson (the one with the highest `order`) as a model of style and density.
+
+A lesson has two numbers, and they can differ because lessons have been reordered:
+
+- the **number** in its id and file name (`l04-…`, and every item id `l04.…`). It is permanent. The new lesson takes the highest number used by any file in `lessons/` + 1.
+- its **`order`**, the position in the course (*Leçon 5* in the app). The new lesson takes the highest existing `order` + 1, so it comes last.
 
 Check what has already been taught so nothing is duplicated: search the existing lesson files for each word and sentence you plan to add. Something already present is skipped, not repeated (unless the notes clearly revisit it with a new meaning).
 
@@ -77,6 +82,18 @@ Guidelines:
 - Write apostrophes as straight `'`. The app displays them properly.
 - Aim for roughly 35–70 items from the notes, plus the practice material of step 3b. A lesson is better short and right than long and padded.
 
+### 3c. Name the lesson
+
+Name it after what she will be able to **do** once she has learned it, not after a sentence that happened to come up in class. A title like *Il y a sept ans* or *Une croisière* means something on the day and nothing a month later; *Raconter le passé* or *Ma journée et les questions* still says what is inside.
+
+- **`title`**: French, 2 to 5 words, sentence case, no full stop. A topic (*Faire les courses*, *En cuisine*), a skill (*Raconter le passé*, *Sortir et inviter*) or the main grammar point when it is the heart of the lesson (*Le futur simple*). Never a name, a place or a detail from her life.
+- **`titleEn`**: English, under about 60 characters, the two or three things the lesson covers, most important first (`"Shops, food, quantities and prices"`).
+- **`summary`**: one English sentence listing what the lesson teaches.
+- **`emoji`**: one emoji for the topic, different from the other lessons'.
+- **File name and id**: `lNN-<slug>`, the slug being the title in lowercase ASCII with hyphens (`Faire les courses` → `l11-faire-les-courses`).
+
+Check the titles of the existing lessons (`grep '"title"' lessons/l*.json`) so the new one does not repeat or overlap one of them, and keeps the same style.
+
 ## 4. Correct and generalise
 
 **French.** The notes are a learner's notes and contain mistakes. Teach the correct form, and keep a list of every correction (what the notes said → what the lesson says, and why). Typical slips: verb endings (`je met` → `je mets`, `elle vas` → `elle va`), accents (`préféres` → `préfères`), agreement, missing elision, anglicisms. Where the notes use a regional form (for example Canadian `bleuet`), teach standard French from France and mention the variant in a `note`. Where the notes give only English, supply the French and list it as an addition.
@@ -87,7 +104,7 @@ Guidelines:
 
 Show the user, concisely:
 
-1. The proposed title (French), English subtitle, emoji and lesson number.
+1. The proposed title (French), English subtitle, emoji, number and order (step 3c).
 2. Everything illegible or unclear, each with your best reading, as questions.
 3. The list of corrections to the French.
 4. The list of privacy changes, and anything you were unsure whether to generalise.
@@ -97,7 +114,7 @@ Wait for the answers. Apply them.
 
 ## 6. Write and verify
 
-1. Write `lessons/lNN-<slug>.json` (the file name is the lesson `id`).
+1. Write `lessons/lNN-<slug>.json` (the file name is the lesson `id`; `NN` is the number, not the order).
 2. Proofread: re-read every French string once more for nothing but gender, agreement, verb endings, accents and elision; every cloze for a distractor that could be defended as correct; every sentence for a correct translation missing from its alternatives, and every trap that would also be correct.
 3. `npm run validate` and fix what it reports.
 4. `npm run lessons:lock` to record the new ids.
@@ -116,4 +133,4 @@ Wait for the answers. Apply them.
 
 ## 8. Report
 
-Tell the user: the lesson number and title, how many items of each kind, the corrections and privacy changes that were applied, whether it is live or waiting in a pull request (with the link), and that the iPad will offer the update the next time the app is opened with an internet connection (a banner on the home screen: "A new version is ready").
+Tell the user: the lesson's place in the course (*Leçon N*) and title, how many items of each kind, the corrections and privacy changes that were applied, whether it is live or waiting in a pull request (with the link), and that the iPad will offer the update the next time the app is opened with an internet connection (a banner on the home screen: "A new version is ready").

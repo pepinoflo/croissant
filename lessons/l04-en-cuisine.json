@@ -1,9 +1,9 @@
 {
   "schema": 1,
-  "id": "l04-les-objets",
-  "order": 4,
-  "title": "Les objets de la cuisine",
-  "titleEn": "In the kitchen: utensils and cooking verbs",
+  "id": "l04-en-cuisine",
+  "order": 5,
+  "title": "En cuisine",
+  "titleEn": "Kitchen utensils, cooking verbs and recipes",
   "emoji": "🍳",
   "summary": "The names of kitchen utensils, the verbs for preparing, cooking and finishing a dish, and explaining a recipe step by step.",
   "items": [

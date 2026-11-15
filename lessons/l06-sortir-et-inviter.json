@@ -1,9 +1,9 @@
 {
   "schema": 1,
-  "id": "l06-les-activites",
-  "order": 6,
-  "title": "Les activités",
-  "titleEn": "Going out: invitations and the near future",
+  "id": "l06-sortir-et-inviter",
+  "order": 8,
+  "title": "Sortir et inviter",
+  "titleEn": "Going out, invitations and the near future",
   "emoji": "🎟️",
   "summary": "Things to do in town, inviting someone and answering, sorting out the details, and the futur proche (je vais sortir) for plans.",
   "items": [
