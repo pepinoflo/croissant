@@ -72,6 +72,32 @@ export async function saveProfile(db: Database, profile: Profile): Promise<void>
   await db.put('kv', profile, 'profile');
 }
 
+/**
+ * Keys for outside services (the cloud backup, the writing tutor). Kept apart
+ * from the settings so they never end up in a backup file, and kept when
+ * progress is restored or erased.
+ */
+export interface Secrets {
+  /** A GitHub token allowed to read and write gists. */
+  githubToken?: string;
+  /** The secret gist that holds the automatic backup. */
+  gistId?: string;
+  /** Answers in the last automatic backup: a smaller number here means progress was lost, so it is not overwritten. */
+  cloudAnswers?: number;
+  lastCloudAt?: number;
+  /** A backup is waiting to be sent (the last try failed). */
+  cloudPending?: boolean;
+  openrouterKey?: string;
+}
+
+export async function loadSecrets(db: Database): Promise<Secrets> {
+  return ((await db.get('kv', 'secrets')) as Secrets | undefined) ?? {};
+}
+
+export async function saveSecrets(db: Database, secrets: Secrets): Promise<void> {
+  await db.put('kv', secrets, 'secrets');
+}
+
 export async function saveSettings(db: Database, settings: Settings): Promise<void> {
   await db.put('kv', settings, 'settings');
 }
@@ -82,8 +108,10 @@ export async function replaceAll(db: Database, data: ProgressData): Promise<void
   const cards = tx.objectStore('cards');
   const days = tx.objectStore('days');
   const kv = tx.objectStore('kv');
+  const secrets = await kv.get('secrets');
   await Promise.all([cards.clear(), days.clear(), kv.clear()]);
   await Promise.all([
+    ...(secrets ? [kv.put(secrets, 'secrets')] : []),
     ...data.cards.map((c) => cards.put(c)),
     ...data.days.map((d) => days.put(d)),
     kv.put(data.profile, 'profile'),
@@ -92,12 +120,10 @@ export async function replaceAll(db: Database, data: ProgressData): Promise<void
   await tx.done;
 }
 
+/** Erases all progress. The keys for outside services are kept. */
 export async function clearAll(db: Database): Promise<void> {
   const tx = db.transaction(['cards', 'days', 'kv'], 'readwrite');
-  await Promise.all([
-    tx.objectStore('cards').clear(),
-    tx.objectStore('days').clear(),
-    tx.objectStore('kv').clear(),
-  ]);
+  const kv = tx.objectStore('kv');
+  await Promise.all([tx.objectStore('cards').clear(), tx.objectStore('days').clear(), kv.delete('profile'), kv.delete('settings')]);
   await tx.done;
 }

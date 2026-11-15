@@ -134,6 +134,17 @@ describe('planSession', () => {
     expect(p.reviewCount).toBe(SIZES.normal.reviews);
   });
 
+  it('asks at most one writing task, even when several are due or new', () => {
+    const writing = catalog.study.filter((i) => i.type === 'writing');
+    expect(writing.length).toBeGreaterThan(3);
+    const due = plan(learned(writing, NOW - 60 * DAY_MS));
+    expect(due.steps.filter((s) => catalog.items.get(s.itemId)?.type === 'writing').length).toBe(1);
+    const lesson = catalog.lessonOf.get(writing[0].id)!;
+    const others = catalog.study.filter((i) => catalog.lessonOf.get(i.id) === lesson && i.type !== 'writing');
+    const fresh = plan(learned(others, NOW), { focusLessonId: lesson.id, size: 'long' });
+    expect(fresh.steps.filter((s) => catalog.items.get(s.itemId)?.type === 'writing').length).toBe(1);
+  });
+
   it('keeps to one lesson when asked', () => {
     const lesson = catalog.lessons[4];
     const p = plan(new Map(), { focusLessonId: lesson.id });

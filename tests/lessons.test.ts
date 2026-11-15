@@ -93,7 +93,10 @@ describe('every item can be turned into every exercise it supports', () => {
           expect(tilesMatch(ex.tiles, ex.accepted), `${variant}: tiles start out solved`).toBe(false);
         }
         if (ex.kind === 'gender') expect(['m', 'f']).toContain(ex.gender);
-        if (ex.kind === 'open') expect(ex.models.length).toBeGreaterThanOrEqual(2);
+        if (ex.kind === 'open') expect(ex.models.length).toBeGreaterThanOrEqual(ex.long ? 1 : 2);
+        if (ex.kind === 'open' && ex.minWords) {
+          for (const m of ex.models) expect(m.split(/\s+/).length, 'model shorter than asked').toBeGreaterThanOrEqual(ex.minWords * 0.8);
+        }
       }
     }
   });

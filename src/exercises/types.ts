@@ -72,10 +72,23 @@ export interface UnscrambleExercise extends BaseExercise {
   traps: number;
 }
 
-/** An open question: she writes or says her own answer, then compares it with examples. */
+/**
+ * An open answer: a reply to a question, or a short text on a theme. She writes
+ * or says it, then the tutor corrects it (when set up) or she compares it with
+ * the examples.
+ */
 export interface OpenExercise extends BaseExercise {
   kind: 'open';
   models: string[];
+  /** A longer text (a message, a letter), not a one-sentence answer. */
+  long?: boolean;
+  /** For a translation task: the English text. */
+  source?: string;
+  /** What the text should contain. */
+  points?: string[];
+  minWords?: number;
+  /** The task as given to the tutor. */
+  task: { fr: string; en: string };
 }
 
 export interface FlashcardExercise extends BaseExercise {

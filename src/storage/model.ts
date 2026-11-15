@@ -1,5 +1,6 @@
 // The shapes of everything saved on the device.
 
+import { DEFAULT_TUTOR_MODEL } from '../ai/tutor';
 import { initialStreak, type StreakState } from '../game/streak';
 import type { CardState } from '../srs/scheduler';
 
@@ -33,6 +34,8 @@ export interface Settings {
   voiceURI: string | null;
   speechRate: number;
   theme: 'auto' | 'light' | 'dark';
+  /** OpenRouter model used by the writing tutor. */
+  tutorModel: string;
 }
 
 export interface DayRecord {
@@ -77,6 +80,7 @@ export function defaultSettings(): Settings {
     voiceURI: null,
     speechRate: 0.9,
     theme: 'auto',
+    tutorModel: DEFAULT_TUTOR_MODEL,
   };
 }
 

@@ -60,7 +60,7 @@ Work through the notes and collect:
 
 ### 3b. Write practice material to speak and write
 
-This part is not limited to the notes: build new sentences from the lesson's words and grammar, mixed with what earlier lessons taught, at a solid A2 level (two clauses, connectors like *parce que, mais, donc, quand, avant de*, the tenses she has met). Aim for about **20 items per lesson**, put under three `group` headings:
+This part is not limited to the notes: build new sentences from the lesson's words and grammar, mixed with what earlier lessons taught, at a solid A2 level (two clauses, connectors like *parce que, mais, donc, quand, avant de*, the tenses she has met). Aim for about **22 items per lesson**, put under four `group` headings:
 
 - **`sentence`** (group `À toi de parler`, id letter `s`), about 12: an English sentence she must say or write in French. Exercises: word bank with trap words, writing the whole sentence, saying it aloud, dictation.
   - List every correct translation. Use square brackets for variants inside one string: `"Il y a cinq ans, [on a|nous avons] déménagé."`; an empty option makes a word optional: `"Laisse refroidir [pendant |]dix minutes."`. The first option is the one displayed. Put other word orders in `frAlt`.
@@ -68,7 +68,11 @@ This part is not limited to the notes: build new sentences from the lesson's wor
   - `traps`: two or three single words that are tempting mistakes for this sentence — a wrong person (`prend` for `prends`), the wrong article or possessive (`mon` for `ma`), `pendant` for `depuis`. Never a word of the sentence or of an accepted variant. The app adds more traps by itself.
   - `hint`: a few words of English on how to build it (`"aller takes être"`), only when useful.
 - **`transform`** (group `Transformer`, letter `t`), about 5: a French sentence to rewrite — negative, another tense, another person, a formal question. `task` in French (`"Mets la phrase au passé composé."`), `taskEn` in English, `from`, and the result in `fr` (alternatives as above). Typed answers are checked strictly (no typo allowance), so list every correct form.
-- **`question`** (group `À toi de répondre`, letter `q`), about 3: an open personal question in French (`"Qu'est-ce que tu as fait le week-end dernier ?"`), a `hint` on how to answer, and two or three `models` (sample answers in the feminine). She answers freely and compares; nothing is checked automatically.
+- **`question`** (group `À toi de répondre`, letter `q`), about 3: an open personal question in French (`"Qu'est-ce que tu as fait le week-end dernier ?"`), a `hint` on how to answer, and two or three `models` (sample answers in the feminine). She answers freely, then the writing tutor corrects it (if set up) or she compares with the models.
+- **`writing`** (group `À toi d'écrire`, letter `w`), 2. These make her think in French rather than read it, so they matter most:
+  - one **text to write** on the lesson's theme: a message to a friend, an email, a short story, a description (`fr`: the task in French, starting with a verb such as *Écris*, *Raconte*, *Décris*, *Explique*; `en`: the task in English). Give `minWords` (30 to 60), two to four `points` in English naming what to use (`"the passé composé for what you did"`, `"d'abord, ensuite, enfin"`), and one model text of at least that length, in the feminine, with invented neutral details.
+  - one **short English text to translate** (`source`: two to four connected sentences, or a short dialogue with one line per speaker, that need the lesson's grammar). `fr`: `"Traduis ce texte en français."` (or a more specific task), `en`: `"Translate this text into French."`, one or two `points` on the traps, and one or two complete `models` (e.g. one with *tu* or *on*, one with *vous* or *nous*).
+  - The writing tutor uses `fr`, `en`, `source` and `points` to correct her text, so make them precise. A session asks at most one writing task, so two per lesson is enough.
 
 Link each to the lesson's grammar card with `"grammar"` when it practises it. Keep the privacy rules: invent neutral details, never use hers.
 
@@ -78,7 +82,7 @@ Guidelines:
 - Glosses are in English, short, and distinct from one another (two items in a lesson should not share the same `en`; use `enAlt` for extra meanings and synonyms).
 - **Distractors must be wrong, not merely different.** "Je téléphone à ___ mère": `sa` is grammatical, so it cannot be a distractor; `mon` can. When several answers are right, put the others in `accept`.
 - A `note` is one short line in English: a pronunciation trap, a false friend, the feminine form.
-- Ids: `lNN.<letter>.<slug>` with `v` vocab, `p` phrase, `c` conjugation, `x` cloze, `s` sentence, `t` transform, `q` question, `g` grammar; slug in lowercase ASCII with hyphens (`l11.v.boulangerie`).
+- Ids: `lNN.<letter>.<slug>` with `v` vocab, `p` phrase, `c` conjugation, `x` cloze, `s` sentence, `t` transform, `q` question, `w` writing, `g` grammar; slug in lowercase ASCII with hyphens (`l11.v.boulangerie`).
 - Write apostrophes as straight `'`. The app displays them properly.
 - Aim for roughly 35–70 items from the notes, plus the practice material of step 3b. A lesson is better short and right than long and padded.
 
@@ -108,14 +112,14 @@ Show the user, concisely:
 2. Everything illegible or unclear, each with your best reading, as questions.
 3. The list of corrections to the French.
 4. The list of privacy changes, and anything you were unsure whether to generalise.
-5. The count of items by type, and a few of the practice sentences as a sample.
+5. The count of items by type, a few of the practice sentences, and the two writing tasks as a sample.
 
 Wait for the answers. Apply them.
 
 ## 6. Write and verify
 
 1. Write `lessons/lNN-<slug>.json` (the file name is the lesson `id`; `NN` is the number, not the order).
-2. Proofread: re-read every French string once more for nothing but gender, agreement, verb endings, accents and elision; every cloze for a distractor that could be defended as correct; every sentence for a correct translation missing from its alternatives, and every trap that would also be correct.
+2. Proofread: re-read every French string once more for nothing but gender, agreement, verb endings, accents and elision; every cloze for a distractor that could be defended as correct; every sentence for a correct translation missing from its alternatives, and every trap that would also be correct; every writing model for the same mistakes, and its length against `minWords`.
 3. `npm run validate` and fix what it reports.
 4. `npm run lessons:lock` to record the new ids.
 5. `npm test` and `npm run build`. Both must pass. If a test about existing lessons fails, you changed something you should not have: undo it.

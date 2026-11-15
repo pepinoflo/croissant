@@ -8,16 +8,20 @@ import { completeDay, reconcile } from '../game/streak';
 import { levelForXp, PERFECT_BONUS, SESSION_BONUS } from '../game/xp';
 import { dayKey } from '../srs/day';
 import { newCard, review, stageOf, type CardState, type Grade } from '../srs/scheduler';
-import { backupFileName, exportBackup, importBackup, parseBackup, type BackupFile } from '../storage/backup';
+import { BACKUP_APP, BACKUP_FORMAT, backupFileName, exportBackup, importBackup, parseBackup, type BackupFile } from '../storage/backup';
+import { CloudError, findBackupGist, readCloudBackup, writeCloudBackup } from '../storage/cloud';
 import {
   clearAll,
   loadAll,
+  loadSecrets,
   openDatabase,
   saveCards,
   saveDay,
   saveProfile,
+  saveSecrets,
   saveSettings,
   type Database,
+  type Secrets,
 } from '../storage/db';
 import {
   defaultProfile,
@@ -51,6 +55,12 @@ export const clock = signal(Date.now());
 export const lostStreak = signal(0);
 /** Set when the service worker has downloaded a newer version of the app. */
 export const updateReady = signal<null | (() => void)>(null);
+/** Keys for the cloud backup and the writing tutor. Never part of a backup file. */
+export const secrets = signal<Secrets>({});
+/** What the automatic backup is doing, for Réglages. */
+export const cloudStatus = signal<{ state: 'idle' | 'saving' | 'saved' | 'waiting' | 'error' | 'conflict'; message?: string }>({
+  state: 'idle',
+});
 
 export const today = computed(() => dayKey(clock.value));
 export const recentAccuracy = computed(() => {
@@ -100,7 +110,13 @@ export async function init(): Promise<void> {
     days.value = new Map(data.days.map((d) => [d.day, d]));
     profile.value = data.profile;
     settings.value = data.settings;
+    secrets.value = await loadSecrets(db);
     reconcileStreak();
+    // A backup that could not be sent last time (no internet) goes now.
+    if (secrets.value.cloudPending) void autoBackup();
+    window.addEventListener('online', () => {
+      if (secrets.value.cloudPending) void autoBackup();
+    });
     // Ask the browser not to clear this data when storage runs low.
     navigator.storage?.persist?.().catch(() => undefined);
   } catch (err) {
@@ -113,6 +129,7 @@ export async function init(): Promise<void> {
     if (document.visibilityState !== 'visible') return;
     clock.value = Date.now();
     reconcileStreak();
+    if (secrets.value.cloudPending) void autoBackup();
   });
 }
 
@@ -233,6 +250,7 @@ export function completeSession(result: { xpBefore: number; mistakes: number }):
   const day = days.value.get(today.value) ?? emptyDay(today.value);
   setDay({ ...day, xp: day.xp + bonusXp, sessions: day.sessions + 1 });
   lostStreak.value = 0;
+  void autoBackup();
   return {
     bonusXp,
     streak: done.streak.current,
@@ -255,6 +273,7 @@ export function recordSprint(score: number): { best: boolean; achievements: Achi
   setProfile(next);
   const day = days.value.get(today.value) ?? emptyDay(today.value);
   setDay({ ...day, xp: day.xp + score * 2 });
+  void autoBackup();
   return { best, achievements: unlocked };
 }
 
@@ -327,6 +346,109 @@ export async function restoreBackup(backup: BackupFile): Promise<void> {
   settings.value = data.settings;
   lostStreak.value = 0;
   reconcileStreak();
+  // The restored progress is what the next automatic backup compares against.
+  if (secrets.value.githubToken) updateSecrets({ cloudAnswers: data.profile.totals.answers });
+  if (cloudStatus.value.state === 'conflict') cloudStatus.value = { state: 'idle' };
+}
+
+// ——— Automatic backup to a secret GitHub gist ———
+
+export function updateSecrets(patch: Partial<Secrets>): void {
+  const next = { ...secrets.value, ...patch };
+  for (const k of Object.keys(next) as (keyof Secrets)[]) if (next[k] === undefined) delete next[k];
+  secrets.value = next;
+  persist((d) => saveSecrets(d, next));
+}
+
+/** All progress as it is in memory right now, in the backup file format. */
+function snapshot(now: number): BackupFile {
+  return {
+    app: BACKUP_APP,
+    format: BACKUP_FORMAT,
+    exportedAt: new Date(now).toISOString(),
+    data: { cards: [...cards.value.values()], days: [...days.value.values()], profile: profile.value, settings: settings.value },
+  };
+}
+
+let backupRunning: Promise<void> | null = null;
+let backupAgain = false;
+
+/**
+ * Sends a copy of all progress to the gist, if one is set up. Runs after each
+ * finished session; if there is no internet it is retried when the app is
+ * next opened or comes back online.
+ */
+export function autoBackup(opts: { force?: boolean } = {}): Promise<void> {
+  if (backupRunning) {
+    backupAgain = true;
+    return backupRunning;
+  }
+  backupRunning = sendBackup(opts.force ?? false).finally(() => {
+    backupRunning = null;
+    if (backupAgain) {
+      backupAgain = false;
+      void autoBackup();
+    }
+  });
+  return backupRunning;
+}
+
+async function sendBackup(force: boolean): Promise<void> {
+  const sec = secrets.value;
+  if (!sec.githubToken) return;
+  const now = Date.now();
+  const backup = snapshot(now);
+  const answers = profile.value.totals.answers;
+  // Fewer answers than in the last backup means progress was lost here (or
+  // erased): never overwrite the better copy without being asked.
+  if (!force && sec.cloudAnswers !== undefined && answers < sec.cloudAnswers) {
+    cloudStatus.value = {
+      state: 'conflict',
+      message: 'The online backup has more progress than this iPad, so it was not replaced. Restore it, or choose to replace it.',
+    };
+    return;
+  }
+  cloudStatus.value = { state: 'saving' };
+  try {
+    const gistId = await writeCloudBackup(sec.githubToken, sec.gistId, backup);
+    updateSecrets({ gistId, cloudAnswers: answers, lastCloudAt: now, cloudPending: undefined });
+    setProfile({ ...profile.value, lastBackupAt: now, backupSnoozedUntil: null });
+    cloudStatus.value = { state: 'saved' };
+  } catch (err) {
+    const retry = err instanceof CloudError ? err.retry : true;
+    updateSecrets({ cloudPending: true });
+    cloudStatus.value = { state: retry ? 'waiting' : 'error', message: (err as Error).message };
+  }
+}
+
+/**
+ * Checks a token and looks for a backup made earlier. Returns that backup when
+ * there is one, so she can choose to restore it; the token is saved either way.
+ */
+export async function connectCloud(token: string): Promise<BackupFile | null> {
+  const gistId = await findBackupGist(token);
+  const found = gistId ? await readCloudBackup(token, gistId, Date.now()) : null;
+  updateSecrets({
+    githubToken: token,
+    gistId: gistId ?? undefined,
+    cloudAnswers: found?.data.profile.totals.answers,
+    lastCloudAt: found ? Date.parse(found.exportedAt) : undefined,
+    cloudPending: undefined,
+  });
+  cloudStatus.value = { state: 'idle' };
+  return found;
+}
+
+export function disconnectCloud(): void {
+  updateSecrets({ githubToken: undefined, gistId: undefined, cloudAnswers: undefined, lastCloudAt: undefined, cloudPending: undefined });
+  cloudStatus.value = { state: 'idle' };
+}
+
+/** Downloads the online backup, so its contents can be confirmed before restoring. */
+export async function readCloud(): Promise<BackupFile> {
+  const { githubToken, gistId } = secrets.value;
+  if (!githubToken || !gistId) throw new CloudError('There is no online backup yet.');
+  return readCloudBackup(githubToken, gistId, Date.now());
 }
 
 export async function resetEverything(): Promise<void> {

@@ -16,7 +16,10 @@ import type {
 } from '../exercises/types';
 import { sfx } from '../speech/sfx';
 import { canSpeak, speak } from '../speech/tts';
-import { checkAnswer, type Verdict } from '../srs/grading';
+import { correctText, type TutorReply } from '../ai/tutor';
+import { appendText, canDictate, startDictation, type Dictation } from '../speech/dictation';
+import { secrets, settings } from '../state/store';
+import { checkAnswer, diffWords, type Verdict } from '../srs/grading';
 import type { Grade } from '../srs/scheduler';
 import { Button, Fr, Icon, Picture, SpeakButton } from './ui';
 
@@ -203,7 +206,10 @@ export function TypeView({ ex, locked, onAnswer }: ViewProps<TypeExercise>) {
         )}
         {!locked && (
           <>
-            <AccentBar onInsert={insert} />
+            <div class="type-tools">
+              <AccentBar onInsert={insert} />
+              {ex.sentence && !ex.prompt.audioOnly && <DictateButton onText={(t) => setValue((v) => appendText(v, t))} />}
+            </div>
             <div class="type-actions">
               <Button kind="ghost" onClick={() => submit('')}>
                 Je ne sais pas
@@ -283,6 +289,7 @@ export function UnscrambleView({ ex, locked, onAnswer }: ViewProps<UnscrambleExe
 
 export function FlashcardView({ ex, locked, onAnswer }: ViewProps<FlashcardExercise>) {
   const [shown, setShown] = useState(false);
+  const [heard, setHeard] = useState('');
   const said = ex.xpKind === 'say';
   const reveal = () => {
     setShown(true);
@@ -294,6 +301,12 @@ export function FlashcardView({ ex, locked, onAnswer }: ViewProps<FlashcardExerc
       {!shown ? (
         <div class={`flash-actions ${said ? 'flash-actions-say' : ''}`}>
           {said && <p class="say-cue">Say the whole sentence aloud, then check.</p>}
+          {said && <DictateButton onText={(t) => setHeard((v) => appendText(v, t))} />}
+          {heard && (
+            <p class="heard">
+              <span class="sheet-hint">You said:</span> <span lang="fr">{heard}</span>
+            </p>
+          )}
           <Button onClick={reveal} wide>
             {said ? 'I said it — show me' : 'Show the answer'}
           </Button>
@@ -307,6 +320,21 @@ export function FlashcardView({ ex, locked, onAnswer }: ViewProps<FlashcardExerc
               {ex.back.lang === 'fr' && <SpeakButton text={ex.back.text} />}
             </div>
             {ex.answer.note && <p class="note">{ex.answer.note}</p>}
+            {heard && (
+              <p class="heard">
+                <span class="sheet-hint">You said:</span>{' '}
+                <span class="fr diff" lang="fr">
+                  {diffWords(ex.back.text, heard).map((p, i) => (
+                    <>
+                      {i > 0 && ' '}
+                      <span key={i} class={p.ok ? '' : 'diff-miss'}>
+                        {p.word}
+                      </span>
+                    </>
+                  ))}
+                </span>
+              </p>
+            )}
           </div>
           {!locked && (
             <div class="rate">
@@ -330,42 +358,214 @@ export function FlashcardView({ ex, locked, onAnswer }: ViewProps<FlashcardExerc
   );
 }
 
+/** A microphone button that types what she says, in French. Hidden where the browser cannot do it. */
+export function DictateButton({ onText, disabled }: { onText: (text: string) => void; disabled?: boolean }) {
+  const [listening, setListening] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const session = useRef<Dictation | null>(null);
+  useEffect(() => () => session.current?.stop(), []);
+  if (!canDictate()) return null;
+  const toggle = () => {
+    if (session.current) {
+      session.current.stop();
+      return;
+    }
+    setError(null);
+    session.current = startDictation(onText, (err) => {
+      session.current = null;
+      setListening(false);
+      if (err) setError(err);
+    });
+    setListening(!!session.current);
+    if (!session.current) setError('Voice input is not available here. Use the microphone key on the keyboard instead.');
+  };
+  return (
+    <span class="dictate">
+      <button
+        type="button"
+        class={`btn btn-secondary dictate-btn ${listening ? 'is-listening' : ''}`}
+        disabled={disabled}
+        onClick={toggle}
+        aria-pressed={listening}
+      >
+        <Icon name="mic" size={20} /> {listening ? 'Stop' : 'Parler'}
+      </button>
+      {error && <span class="quiet small">{error}</span>}
+    </span>
+  );
+}
+
+const wordsIn = (s: string): number => (s.trim() ? s.trim().split(/\s+/).length : 0);
+
+/** What the tutor would grade it, as one of the three self-rating buttons. */
+const SUGGESTED: Record<TutorReply['verdict'], 'again' | 'hard' | 'good'> = { great: 'good', good: 'hard', retry: 'again' };
+
+function TutorPanel({ given, reply }: { given: string; reply: TutorReply }) {
+  const parts = diffWords(given, reply.corrected);
+  return (
+    <div class="tutor">
+      <p class="tutor-comment">
+        <Icon name="sparkle" size={20} /> {reply.comment}
+      </p>
+      {reply.mistakes.length > 0 ? (
+        <>
+          <p class="sheet-hint">Corrected (the changes are marked):</p>
+          <p class="fr diff tutor-text" lang="fr">
+            {parts.map((p, i) => (
+              <>
+                {i > 0 && ' '}
+                <span key={i} class={p.ok ? '' : 'diff-miss'}>
+                  {pretty(p.word)}
+                </span>
+              </>
+            ))}
+            <SpeakButton text={reply.corrected} />
+          </p>
+          <ul class="tutor-mistakes">
+            {reply.mistakes.map((m, i) => (
+              <li key={i}>
+                <span lang="fr" class="tutor-wrong">
+                  {pretty(m.wrong)}
+                </span>{' '}
+                →{' '}
+                <span lang="fr" class="tutor-right">
+                  {pretty(m.right)}
+                </span>
+                {m.why && <span class="quiet small"> — {m.why}</span>}
+              </li>
+            ))}
+          </ul>
+        </>
+      ) : (
+        <p class="tutor-ok">No mistakes. Bravo !</p>
+      )}
+      {reply.natural && (
+        <p class="tutor-natural">
+          <span class="sheet-hint">More natural:</span> <Fr>{reply.natural}</Fr> <SpeakButton text={reply.natural} />
+        </p>
+      )}
+    </div>
+  );
+}
+
 export function OpenView({ ex, locked, onAnswer }: ViewProps<OpenExercise>) {
   const [value, setValue] = useState('');
-  const [shown, setShown] = useState(false);
-  const rate = (verdict: Verdict, grade: Grade) => onAnswer({ verdict, grade, selfRated: true });
+  const [phase, setPhase] = useState<'write' | 'checking' | 'done'>('write');
+  const [reply, setReply] = useState<TutorReply | null>(null);
+  const [tutorError, setTutorError] = useState<string | null>(null);
+  const input = useRef<HTMLTextAreaElement>(null);
+  const key = secrets.value.openrouterKey;
+  const shown = phase !== 'write';
+  const rate = (verdict: Verdict, grade: Grade) => onAnswer({ verdict, grade, selfRated: true, given: value });
+  const count = wordsIn(value);
+
+  const insert = (ch: string) => {
+    const el = input.current;
+    const start = el?.selectionStart ?? value.length;
+    const end = el?.selectionEnd ?? value.length;
+    setValue(value.slice(0, start) + ch + value.slice(end));
+    requestAnimationFrame(() => {
+      el?.focus({ preventScroll: true });
+      el?.setSelectionRange(start + ch.length, start + ch.length);
+    });
+  };
+
+  const askTutor = async () => {
+    if (!key || !value.trim()) return;
+    setPhase('checking');
+    setTutorError(null);
+    try {
+      setReply(
+        await correctText(key, settings.peek().tutorModel, {
+          task: ex.task.fr,
+          taskEn: ex.task.en,
+          source: ex.source,
+          points: ex.points,
+          minWords: ex.minWords,
+          text: value,
+        }),
+      );
+    } catch (err) {
+      setTutorError((err as Error).message);
+    }
+    setPhase('done');
+  };
+
+  const suggested = reply ? SUGGESTED[reply.verdict] : null;
+  const mark = (g: 'again' | 'hard' | 'good') => (suggested === g ? ' ✓' : '');
+
   return (
     <>
       <PromptView prompt={ex.prompt} />
+      {ex.source && (
+        <blockquote class="source" lang="en">
+          {ex.source}
+        </blockquote>
+      )}
+      {ex.points && ex.points.length > 0 && (
+        <ul class="points">
+          {ex.points.map((p) => (
+            <li key={p}>{pretty(p)}</li>
+          ))}
+        </ul>
+      )}
       <div class="type">
         <textarea
-          class="type-input type-input-long"
+          ref={input}
+          class={`type-input type-input-long ${ex.long ? 'type-input-letter' : ''}`}
           lang="fr"
-          rows={3}
+          rows={ex.long ? 7 : 3}
           value={value}
           readOnly={shown}
           onInput={(e) => setValue((e.target as HTMLTextAreaElement).value)}
-          placeholder="Write your answer, or say it out loud…"
+          placeholder={ex.long ? 'Écris ton texte ici… (or tap the microphone to speak)' : 'Write your answer, or say it out loud…'}
           autocomplete="off"
           autocapitalize="sentences"
           spellcheck={false}
           aria-label="Your answer in French"
         />
+        {ex.long && (
+          <p class={`word-count ${ex.minWords && count >= ex.minWords ? 'is-enough' : ''}`}>
+            {count} {count === 1 ? 'word' : 'words'}
+            {ex.minWords ? ` · about ${ex.minWords} asked` : ''}
+          </p>
+        )}
         {!shown && (
           <>
-            <AccentBar onInsert={(ch) => setValue(value + ch)} />
+            <div class="type-tools">
+              <AccentBar onInsert={insert} />
+              <DictateButton onText={(t) => setValue((v) => appendText(v, t))} />
+            </div>
             <div class="type-actions">
-              <Button onClick={() => setShown(true)} wide>
-                {value.trim() ? 'Compare with examples' : 'I said it — show examples'}
-              </Button>
+              {key && value.trim() ? (
+                <>
+                  <Button kind="ghost" onClick={() => setPhase('done')}>
+                    See examples
+                  </Button>
+                  <Button onClick={() => void askTutor()}>
+                    <Icon name="sparkle" size={20} /> Corriger
+                  </Button>
+                </>
+              ) : (
+                <Button onClick={() => setPhase('done')} wide>
+                  {value.trim() ? 'Compare with examples' : 'I said it — show examples'}
+                </Button>
+              )}
             </div>
           </>
         )}
       </div>
-      {shown && (
+      {phase === 'checking' && (
+        <p class="tutor-wait" role="status">
+          <Icon name="sparkle" size={20} /> Le tuteur lit ton texte…
+        </p>
+      )}
+      {phase === 'done' && (
         <>
-          <div class="flash-back models">
-            <p class="instruction">Possible answers</p>
+          {reply && <TutorPanel given={value} reply={reply} />}
+          {tutorError && <div class="banner banner-bad">{tutorError} Compare with the examples instead.</div>}
+          <details class="flash-back models" open={!reply}>
+            <summary class="instruction">{ex.models.length > 1 ? 'Examples' : 'An example'}</summary>
             <ul>
               {ex.models.map((m) => (
                 <li key={m}>
@@ -375,19 +575,19 @@ export function OpenView({ ex, locked, onAnswer }: ViewProps<OpenExercise>) {
               ))}
             </ul>
             <p class="quiet small">{ex.answer.en}</p>
-          </div>
+          </details>
           {!locked && (
             <div class="rate">
-              <p class="instruction">How was your answer?</p>
+              <p class="instruction">{reply ? 'The tutor suggests ✓ — you decide:' : 'How was your answer?'}</p>
               <div class="rate-buttons">
                 <Button kind="bad" onClick={() => rate('wrong', 'again')}>
-                  Pas encore
+                  Pas encore{mark('again')}
                 </Button>
                 <Button kind="secondary" onClick={() => rate('accent', 'hard')}>
-                  Avec des fautes
+                  Avec des fautes{mark('hard')}
                 </Button>
                 <Button kind="good" onClick={() => rate('exact', 'good')}>
-                  Correcte !
+                  Correcte !{mark('good')}
                 </Button>
               </div>
             </div>

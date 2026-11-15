@@ -18,7 +18,7 @@ export const LOCK_FILE = join(LESSONS_DIR, 'ids.lock.json');
 const SCHEMA_FILE = join(LESSONS_DIR, 'schema', 'lesson.v1.schema.json');
 const PUBLIC_DIR = join(ROOT, 'public');
 
-const TYPE_LETTER = { vocab: 'v', phrase: 'p', conjugation: 'c', cloze: 'x', sentence: 's', transform: 't', question: 'q', grammar: 'g' };
+const TYPE_LETTER = { vocab: 'v', phrase: 'p', conjugation: 'c', cloze: 'x', sentence: 's', transform: 't', question: 'q', writing: 'w', grammar: 'g' };
 const CLOZE = /\{\{(.+?)\}\}/;
 
 const norm = (s) =>
@@ -153,6 +153,13 @@ export function validateLessons(entries, lock = { ids: [], retired: [] }, opts =
 
       if (item.type === 'question') {
         if (item.models.length < 2) err('give at least two model answers');
+      }
+
+      if (item.type === 'writing') {
+        if (item.models.length > 3) err('give one to three model texts');
+        if (item.minWords && item.models.some((m) => m.split(/\s+/).length < item.minWords * 0.8)) {
+          err(`a model text is much shorter than the ${item.minWords} words asked for`);
+        }
       }
 
       if (item.type === 'cloze') {
