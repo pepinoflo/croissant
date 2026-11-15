@@ -1,7 +1,8 @@
-// Speaking instead of typing, with the browser's speech recognition (on the
-// iPad this is Siri's dictation). Not every browser has it, and a home-screen
-// app may not be allowed to use it; the keyboard's microphone key works in
-// any text box either way.
+// Speaking instead of typing, with the browser's speech recognition.
+//
+// Not on iPhone and iPad: there, in an app added to the home screen, Safari's
+// speech recognition can hang and freeze the whole app. The microphone key on
+// the iPad keyboard does the same job reliably, in any text box.
 
 interface RecognitionResult {
   isFinal: boolean;
@@ -17,6 +18,7 @@ interface Recognition {
   onend: (() => void) | null;
   start(): void;
   stop(): void;
+  abort?(): void;
 }
 
 type RecognitionClass = new () => Recognition;
@@ -27,7 +29,13 @@ function recognitionClass(): RecognitionClass | null {
   return w.SpeechRecognition ?? w.webkitSpeechRecognition ?? null;
 }
 
-export const canDictate = (): boolean => recognitionClass() !== null;
+/** iPhone and iPad, including iPads that present themselves as a Mac. */
+export function isAppleMobile(): boolean {
+  if (typeof navigator === 'undefined') return false;
+  return /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+}
+
+export const canDictate = (): boolean => !isAppleMobile() && recognitionClass() !== null;
 
 export interface Dictation {
   stop(): void;
@@ -42,7 +50,8 @@ export function startDictation(onText: (text: string) => void, onEnd: (error?: s
   if (!Class) return null;
   const rec = new Class();
   rec.lang = 'fr-FR';
-  rec.continuous = true;
+  // One phrase per tap: it stops by itself after a pause, so nothing is left listening.
+  rec.continuous = false;
   rec.interimResults = false;
   let error: string | undefined;
   rec.onresult = (e) => {
@@ -58,10 +67,16 @@ export function startDictation(onText: (text: string) => void, onEnd: (error?: s
         ? 'The microphone is not allowed here. Use the microphone key on the keyboard instead.'
         : 'Voice input stopped. Try again, or use the microphone key on the keyboard.';
   };
-  rec.onend = () => onEnd(error);
+  // Never listen for more than 30 seconds, whatever the browser does.
+  const limit = setTimeout(() => rec.abort?.(), 30_000);
+  rec.onend = () => {
+    clearTimeout(limit);
+    onEnd(error);
+  };
   try {
     rec.start();
   } catch {
+    clearTimeout(limit);
     return null;
   }
   return { stop: () => rec.stop() };

@@ -15,7 +15,7 @@ import type {
   UnscrambleExercise,
 } from '../exercises/types';
 import { sfx } from '../speech/sfx';
-import { canSpeak, speak } from '../speech/tts';
+import { canSpeak, speak, stopSpeaking } from '../speech/tts';
 import { correctText, type TutorReply } from '../ai/tutor';
 import { appendText, canDictate, startDictation, type Dictation } from '../speech/dictation';
 import { secrets, settings } from '../state/store';
@@ -170,7 +170,7 @@ export function TypeView({ ex, locked, onAnswer }: ViewProps<TypeExercise>) {
     value,
     readOnly: locked,
     onInput: (e: Event) => setValue((e.target as HTMLInputElement).value),
-    placeholder: ex.sentence ? 'Écris la phrase en français…' : 'Écris en français…',
+    placeholder: ex.sentence ? 'Écris la phrase en français, ou dicte-la avec 🎤…' : 'Écris en français…',
     autocomplete: 'off',
     autocorrect: 'off',
     autocapitalize: ex.sentence ? 'sentences' : 'off',
@@ -371,6 +371,7 @@ export function DictateButton({ onText, disabled }: { onText: (text: string) => 
       return;
     }
     setError(null);
+    stopSpeaking();
     session.current = startDictation(onText, (err) => {
       session.current = null;
       setListening(false);
@@ -512,7 +513,7 @@ export function OpenView({ ex, locked, onAnswer }: ViewProps<OpenExercise>) {
           value={value}
           readOnly={shown}
           onInput={(e) => setValue((e.target as HTMLTextAreaElement).value)}
-          placeholder={ex.long ? 'Écris ton texte ici… (or tap the microphone to speak)' : 'Write your answer, or say it out loud…'}
+          placeholder={ex.long ? 'Écris ton texte ici… (or tap 🎤 on the keyboard to speak)' : 'Write your answer, or tap 🎤 on the keyboard to say it…'}
           autocomplete="off"
           autocapitalize="sentences"
           spellcheck={false}
