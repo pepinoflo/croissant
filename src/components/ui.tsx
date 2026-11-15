@@ -24,6 +24,11 @@ const ICONS: Record<string, string> = {
   download: 'M12 4v11.5m0 0-4-4m4 4 4-4M5 19.5h14',
   upload: 'M12 16V4.5m0 0-4 4m4-4 4 4M5 19.5h14',
   turtle: 'M4 14c0-4 3.5-7 8-7s8 3 8 7H4zm2 0v3m12-3v3M20 12.5l2-1',
+  undo: 'M9 14 4 9l5-5M4 9h10.5a5.5 5.5 0 0 1 0 11H11',
+  mic: 'M12 3a3 3 0 0 0-3 3v6a3 3 0 0 0 6 0V6a3 3 0 0 0-3-3zM5.5 11.5a6.5 6.5 0 0 0 13 0M12 18v3',
+  sparkle: 'M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8zM19 16l.7 1.8 1.8.7-1.8.7L19 21l-.7-1.8-1.8-.7 1.8-.7z',
+  cloud: 'M7 18.5h10a4 4 0 0 0 .5-8 5.5 5.5 0 0 0-10.6-1.3A4.6 4.6 0 0 0 7 18.5z',
+  pen: 'M4 20h4L19 9l-4-4L4 16zm9-13 4 4',
 };
 
 export function Icon({ name, size = 24 }: { name: string; size?: number }) {
