@@ -479,7 +479,6 @@ export function OpenView({ ex, locked, onAnswer }: ViewProps<OpenExercise>) {
         await correctText(key, settings.peek().tutorModel, {
           task: ex.task.fr,
           taskEn: ex.task.en,
-          source: ex.source,
           points: ex.points,
           minWords: ex.minWords,
           text: value,
@@ -497,11 +496,6 @@ export function OpenView({ ex, locked, onAnswer }: ViewProps<OpenExercise>) {
   return (
     <>
       <PromptView prompt={ex.prompt} />
-      {ex.source && (
-        <blockquote class="source" lang="en">
-          {ex.source}
-        </blockquote>
-      )}
       {ex.points && ex.points.length > 0 && (
         <ul class="points">
           {ex.points.map((p) => (

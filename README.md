@@ -26,7 +26,7 @@ Optional, for a nicer voice in the listening exercises: on the iPad, go to **Set
 - **Vrai ou faux ?** is a 60-second bonus game. It gives a little XP and does not change the review schedule.
 - **Progrès** shows the level, the calendar, what is mastered, and the badges.
 - Tapped the wrong answer? The **↶ button** at the top of a session takes back the last answer, even after *Continuer*, and asks the question again. An answer is only saved once she has moved one question further.
-- **À toi d'écrire**: each lesson has two writing tasks, a short text to write on the lesson's theme (a message, an email, a little story) and a short English text to translate. At most one comes up per session. She can type, or tap **Parler** to speak instead of typing (or use the microphone key on the iPad keyboard). The writing tutor corrects it if it is set up (below); otherwise she compares it with an example.
+- **À toi d'écrire**: each lesson has one or two short texts to write on its theme (a message, an email, a little story). At most one comes up per session; the rest of the session has several short English sentences to translate, typed freely, built from word tiles or said aloud. She can type, or tap **Parler** to speak instead of typing (or use the microphone key on the iPad keyboard). The writing tutor corrects it if it is set up (below); otherwise she compares it with an example.
 
 ### Backups
 
@@ -48,9 +48,9 @@ Croissant never overwrites an online backup that has more answers than the iPad 
 
 Texts and open answers can be corrected by an AI model through [OpenRouter](https://openrouter.ai): her text comes back corrected, with each mistake explained in English, a more natural version when useful, and a suggested self-rating (she has the last word). Without it, she compares her text with the example answers.
 
-1. On openrouter.ai: **Keys → Create key**. Name it `Croissant` and give it a **credit limit** (a few dollars is plenty: one correction costs about a cent).
+1. On openrouter.ai: **Keys → Create key**. Name it `Croissant` and give it a **credit limit** (a few dollars is plenty: one correction costs a fraction of a cent).
 2. Get the key to the iPad as above, then *Réglages → Writing tutor*, paste it, tap **Turn on**. Croissant checks the key and shows the credit left.
-3. The model is set in the same place (`anthropic/claude-sonnet-5.5` by default). If OpenRouter says the model is unknown, copy the exact name from openrouter.ai/models.
+3. The model is set in the same place (`deepseek/deepseek-v4.1-flash-1017` by default). If OpenRouter says the model is unknown, copy the exact name from openrouter.ai/models.
 
 About security: the site is public and has no server, so a key cannot be hidden in the code; that is why it is typed in on the iPad instead, where only the app can read it. It is never committed, never in a backup file, and only sent to OpenRouter. The credit limit is what keeps the risk small: a leaked key could cost at most that amount, and it can be deleted on openrouter.ai at any time. The alternative, a small proxy server holding the key (for example a free Cloudflare Worker), would keep the key off the iPad, but it is one more thing to run and secure, and the proxy's address would itself need protecting.
 
@@ -142,7 +142,7 @@ Answers are graded automatically: wrong → comes back tomorrow; right apart fro
 
 The kind of exercise follows how well an item is known, and moves quickly to producing French, since understanding is the easy part for her: first recognising or building it (multiple choice, pictures, word tiles), then producing it with support (a word bank with trap words such as a wrong ending or article, saying it out loud, typing it), then producing it freely (writing whole sentences, dictation). One good answer is usually enough to move on.
 
-Each lesson also has practice material that goes beyond the notes: sentences to translate into French (mostly typed from scratch rather than built from word tiles, which is closer to reading), sentences to rewrite (negative, another tense, another person), open questions to answer in her own words, and two writing tasks (a short text on a theme, and a short text to translate), corrected by the writing tutor or compared with example answers. Typed sentences are corrected word by word, and since a sentence can often be said several ways, a wrong verdict can be overruled with *My answer was right too*. Sessions also adapt: more new items when recent answers are mostly right and little is due, fewer when she is struggling, none while a backlog of reviews is waiting.
+Each lesson also has practice material that goes beyond the notes: sentences to translate into French (mostly typed from scratch rather than built from word tiles, which is closer to reading), sentences to rewrite (negative, another tense, another person), open questions to answer in her own words, and a short text to write on the lesson's theme, corrected by the writing tutor or compared with example answers. Typed sentences are corrected word by word, and since a sentence can often be said several ways, a wrong verdict can be overruled with *My answer was right too*. Sessions also adapt: more new items when recent answers are mostly right and little is due, fewer when she is struggling, none while a backlog of reviews is waiting.
 
 ### The lesson format
 
@@ -158,7 +158,6 @@ Each lesson also has practice material that goes beyond the notes: sentences to 
 { "id": "l08.t.imp-faire-ski", "type": "transform", "task": "Mets la phrase à l'imparfait.", "taskEn": "Put the sentence in the imparfait.", "from": "Je fais du ski.", "fr": "Je faisais du ski.", "en": "I used to go skiing." }
 { "id": "l06.q.ce-week-end", "type": "question", "fr": "Qu'est-ce que tu vas faire ce week-end ?", "en": "What are you going to do this weekend?", "models": ["Samedi, je vais faire du shopping.", "Je vais visiter un musée."] }
 { "id": "l06.w.invitation", "type": "writing", "fr": "Écris un message pour inviter une amie à sortir samedi.", "en": "Write a message inviting a friend out on Saturday.", "points": ["ça te dit de… ?", "the futur proche"], "minWords": 35, "models": ["Coucou Julie ! Tu es libre samedi soir ? …"] }
-{ "id": "l01.w.traduire-demenagement", "type": "writing", "fr": "Traduis ce texte en français.", "en": "Translate this text into French.", "source": "Ten years ago, we lived in a small town…", "models": ["Il y a dix ans, on habitait dans une petite ville…"] }
 ```
 
 Each lesson has a permanent **number**, in its file name and in every item id (`l04-en-cuisine.json`, `l04.v.passoire`), and an **`order`**, its place in the course (*Leçon 5* in the app). They usually match, but lessons can be moved around by changing only `order`: lesson 4 (cooking) now comes after lesson 5 (shopping), and lesson 8 (planning a trip) before lessons 6 and 7. The number never changes, because progress is stored against the item ids. A new lesson takes the next free number and the next order.

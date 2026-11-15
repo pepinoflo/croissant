@@ -82,8 +82,6 @@ export interface OpenExercise extends BaseExercise {
   models: string[];
   /** A longer text (a message, a letter), not a one-sentence answer. */
   long?: boolean;
-  /** For a translation task: the English text. */
-  source?: string;
   /** What the text should contain. */
   points?: string[];
   minWords?: number;

@@ -6,15 +6,13 @@
 // repository or backup files). Use a key made for Croissant only, with a small
 // credit limit, so a leaked key can cost very little.
 
-export const DEFAULT_TUTOR_MODEL = 'anthropic/claude-sonnet-5.5';
+export const DEFAULT_TUTOR_MODEL = 'deepseek/deepseek-v4.1-flash-1017';
 const API = 'https://openrouter.ai/api/v1';
 
 export interface TutorRequest {
   /** The task or question, in French and in English. */
   task: string;
   taskEn: string;
-  /** For a translation: the English text. */
-  source?: string;
   points?: string[];
   minWords?: number;
   /** What she wrote. */
@@ -52,7 +50,7 @@ How to correct:
 - Ignore a missing capital letter or final full stop.
 - Each mistake: the wrong words exactly as she wrote them, the right words, and why in plain English, under 15 words.
 - If her text is correct but sounds unnatural, give a more natural version in "natural". Otherwise leave "natural" empty.
-- "comment": one or two short sentences in English, kind and specific: something she did well, then the one thing to work on. If she did not do the task (off topic, or a translation missing parts), say so.
+- "comment": one or two short sentences in English, kind and specific: something she did well, then the one thing to work on. If she did not do the task (off topic, or far too short), say so.
 - "verdict": "great" if there are no mistakes or only one small slip and the task is done; "good" if there are a few mistakes but the meaning is clear; "retry" if there are many mistakes, the meaning is unclear, the task was not done, or it is far too short.
 
 Answer with one JSON object and nothing else:
@@ -60,7 +58,6 @@ Answer with one JSON object and nothing else:
 
 function userMessage(req: TutorRequest): string {
   const lines = [`Task (French): ${req.task}`, `Task (English): ${req.taskEn}`];
-  if (req.source) lines.push(`English text to translate:\n${req.source}`);
   if (req.points?.length) lines.push(`It should include:\n${req.points.map((p) => `- ${p}`).join('\n')}`);
   if (req.minWords) lines.push(`Expected length: about ${req.minWords} words or more.`);
   lines.push(`Her text:\n"""\n${req.text.trim()}\n"""`);
@@ -121,6 +118,7 @@ export async function correctText(key: string, model: string, req: TutorRequest,
         model: model || DEFAULT_TUTOR_MODEL,
         temperature: 0.2,
         max_tokens: 1500,
+        response_format: { type: 'json_object' },
         messages: [
           { role: 'system', content: SYSTEM },
           { role: 'user', content: userMessage(req) },

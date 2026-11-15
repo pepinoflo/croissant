@@ -112,7 +112,6 @@ function Row({ item }: { item: StudyItem }) {
           )}
           <Fr>{fr}</Fr>
           <span class="row-en">{item.en}</span>
-          {item.type === 'writing' && item.source && <span class="row-model">{item.source}</span>}
           {(item.type === 'question' || item.type === 'writing') && (
             <span class="row-model">
               e.g. <span lang="fr">{pretty(item.models[0])}</span>

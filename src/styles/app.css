@@ -2132,15 +2132,6 @@ textarea.type-input-long {
   color: var(--good-deep);
   font-weight: 600;
 }
-.source {
-  margin: 0 0 12px;
-  padding: 14px 18px;
-  border-left: 4px solid var(--accent);
-  border-radius: 0 14px 14px 0;
-  background: var(--surface-2);
-  font-size: 1.05rem;
-  line-height: 1.5;
-}
 .points {
   margin: 0 0 12px;
   padding-left: 1.3em;
@@ -2214,7 +2205,6 @@ details.models > summary {
 .token-row .type-input {
   font-family: var(--body);
 }
-.source,
 .models li .fr {
   white-space: pre-line;
 }

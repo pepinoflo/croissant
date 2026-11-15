@@ -125,9 +125,9 @@ export interface QuestionItem extends BaseItem {
 }
 
 /**
- * A short text to write on a theme — a message, a letter, a little story — or
- * a short English text to translate. Corrected by the writing tutor when one is
- * set up, otherwise compared with the model answers.
+ * A short text to write on the lesson's theme: a message, a letter, a little
+ * story. Corrected by the writing tutor when one is set up, otherwise compared
+ * with the model answers.
  */
 export interface WritingItem extends BaseItem {
   type: 'writing';
@@ -135,8 +135,6 @@ export interface WritingItem extends BaseItem {
   fr: string;
   /** The task in English. */
   en: string;
-  /** An English text to translate, for a translation task. */
-  source?: string;
   /** What the text should contain, in English: "say when and where", "use the futur proche". */
   points?: string[];
   /** Roughly how long the text should be. */

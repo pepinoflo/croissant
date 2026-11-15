@@ -145,16 +145,17 @@ export function variantsFor(item: StudyItem, level: number, ctx: GenContext): We
   } else if (item.type === 'sentence') {
     const words = tileCount(item.fr);
     const tiles = words >= 3 && words <= 16;
-    // Mostly written from scratch: building from tiles is reading, writing is thinking in French.
+    // Written from scratch more often than built from tiles, but both stay at every level.
     if (level === 0) {
       out.push(['sent:say', 1], ['sent:type', 2]);
-      if (tiles) out.push(['sent:bank', 3]);
+      if (tiles) out.push(['sent:bank', 4]);
     } else if (level === 1) {
-      out.push(['sent:type', 6], ['sent:say', 2]);
-      if (tiles) out.push(['sent:bank', 1]);
+      out.push(['sent:type', 5], ['sent:say', 2]);
+      if (tiles) out.push(['sent:bank', 3]);
       if (speak) out.push(['sent:dictation', 1]);
     } else {
-      out.push(['sent:type', 6], ['sent:say', 2]);
+      out.push(['sent:type', 5], ['sent:say', 2]);
+      if (tiles) out.push(['sent:bank', 2]);
       if (speak && words <= 12) out.push(['sent:dictation', 1]);
     }
   } else if (item.type === 'transform') {
@@ -733,10 +734,9 @@ function buildWriting(item: WritingItem, variant: string): OpenExercise {
     variant,
     xpKind: 'writing',
     production: true,
-    prompt: { instruction: item.source ? 'Translate into French' : 'Write in French', text: item.fr, lang: 'fr', sub: item.en },
+    prompt: { instruction: 'Write in French', text: item.fr, lang: 'fr', sub: item.en },
     models: item.models,
     long: true,
-    source: item.source,
     points: item.points,
     minWords: item.minWords,
     task: { fr: item.fr, en: item.en },
