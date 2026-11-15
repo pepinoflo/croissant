@@ -362,19 +362,39 @@ export function Session({ focusLessonId, onAgain }: { focusLessonId?: string; on
   useEffect(() => () => stopSpeaking(), []);
 
   const finish = () => {
+    flush();
     const result = completeSession({ xpBefore: stats.current.xpBefore, mistakes: stats.current.missed.size });
     setOutcome(result);
     if (result.levelAfter > result.levelBefore) sfx.levelUp();
     else sfx.complete();
   };
 
+  /** The answer on screen, not yet saved. */
   const pending = useRef<Pending | null>(null);
+  /**
+   * The answer to the question just before, kept unsaved for one more step so
+   * a slip of the finger can still be taken back. It is saved as soon as she
+   * moves on again, leaves, or finishes.
+   */
+  const previous = useRef<{ index: number; answer: Pending; steps: Step[] } | null>(null);
+  const [canUndo, setCanUndo] = useState(false);
+  /** Bumped to show a question afresh after its answer was taken back. */
+  const [attempt, setAttempt] = useState(0);
+  const autoNext = useRef<number | undefined>(undefined);
 
-  /** Saves the answer on screen, and plans a second try if it was wrong. */
-  const commit = () => {
-    const p = pending.current;
-    if (!p) return;
-    pending.current = null;
+  // The app can be closed from the background at any time: save what is held back first.
+  useEffect(() => {
+    const hide = () => {
+      if (document.visibilityState === 'hidden') flushRef.current();
+    };
+    document.addEventListener('visibilitychange', hide);
+    return () => {
+      document.removeEventListener('visibilitychange', hide);
+      flushRef.current();
+    };
+  }, []);
+
+  const save = (p: Pending) => {
     recordAnswers([{ itemId: p.itemId, grade: p.grade, xp: p.xp, variant: p.variant, graded: p.graded }]);
     const s = stats.current;
     if (p.graded) {
@@ -382,24 +402,68 @@ export function Session({ focusLessonId, onAgain }: { focusLessonId?: string; on
       s.xp += p.xp;
       if (!p.wrong) s.correct++;
     }
-    if (p.wrong) {
-      s.missed.add(p.itemId);
-      const nextSteps = withRetry(live.current.steps, live.current.index);
-      setSteps(nextSteps);
-      live.current = { ...live.current, steps: nextSteps };
-    }
+    if (p.wrong) s.missed.add(p.itemId);
   };
 
+  /** Saves everything still held back: used when leaving or finishing. */
+  const flush = () => {
+    if (previous.current) save(previous.current.answer);
+    previous.current = null;
+    if (pending.current) save(pending.current);
+    pending.current = null;
+    setCanUndo(false);
+  };
+  const flushRef = useRef(flush);
+  flushRef.current = flush;
+
   const next = () => {
-    commit();
+    if (previous.current) save(previous.current.answer);
+    previous.current = null;
+    const p = pending.current;
+    pending.current = null;
+    if (p) {
+      const now = live.current;
+      previous.current = { index: now.index, answer: p, steps: now.steps };
+      // A wrong answer comes back a few questions later (undone if the answer is taken back).
+      if (p.wrong) {
+        const nextSteps = withRetry(now.steps, now.index);
+        setSteps(nextSteps);
+        live.current = { ...now, steps: nextSteps };
+      }
+    }
+    setCanUndo(!!previous.current);
     setFeedback(null);
     const now = live.current;
     if (now.index + 1 >= now.steps.length) finish();
     else setIndex(now.index + 1);
   };
 
+  /** Takes back the last answer: the one on screen, or else the previous question's. */
+  const undo = () => {
+    window.clearTimeout(autoNext.current);
+    if (pending.current) {
+      const p = pending.current;
+      pending.current = null;
+      setCombo(p.comboBefore);
+    } else if (previous.current) {
+      const prev = previous.current;
+      previous.current = null;
+      setSteps(prev.steps);
+      live.current = { steps: prev.steps, index: prev.index };
+      setIndex(prev.index);
+      setCombo(prev.answer.comboBefore);
+    } else return;
+    stopSpeaking();
+    sfx.tap();
+    setFeedback(null);
+    setCanUndo(false);
+    setAttempt((a) => a + 1);
+    shownAt.current = Date.now();
+  };
+
   const answer = (o: Outcome) => {
     if (!step || !exercise || exercise.kind === 'match' || feedback || pending.current) return;
+    setCanUndo(true);
     const ex = exercise;
     const wrong = o.verdict === 'wrong';
     const graded = !step.retry;
@@ -423,7 +487,7 @@ export function Session({ focusLessonId, onAgain }: { focusLessonId?: string; on
 
     if (o.selfRated) {
       // Flashcards and open answers have already shown the answer: move straight on.
-      setTimeout(next, 250);
+      autoNext.current = window.setTimeout(next, 250);
       return;
     }
     setFeedback({ outcome: o, ex, xp, praise: PRAISE[Math.floor(Math.random() * PRAISE.length)] });
@@ -527,6 +591,16 @@ export function Session({ focusLessonId, onAgain }: { focusLessonId?: string; on
         <button type="button" class="icon-btn" aria-label="Leave the session" onClick={() => setLeaving(true)}>
           <Icon name="close" />
         </button>
+        <button
+          type="button"
+          class="icon-btn"
+          aria-label="Change my last answer"
+          title="Change my last answer"
+          disabled={!canUndo}
+          onClick={undo}
+        >
+          <Icon name="undo" />
+        </button>
         <Bar value={(index + (feedback ? 1 : 0)) / steps.length} />
         <span class={`combo ${combo >= 3 ? 'combo-on' : ''}`} aria-label={`${combo} in a row`}>
           <Icon name="flame" size={18} />
@@ -535,7 +609,7 @@ export function Session({ focusLessonId, onAgain }: { focusLessonId?: string; on
       </header>
 
       <div class="session-scroll">
-        <div class={`stage ${isCard ? 'stage-card' : ''}`} key={index}>
+        <div class={`stage ${isCard ? 'stage-card' : ''}`} key={`${index}:${attempt}`}>
           {step.kind === 'intro' && item && item.type !== 'grammar' && (
             <>
               <p class="instruction">{item.type === 'conjugation' ? 'New verb' : item.type === 'phrase' ? 'New phrase' : 'New word'}</p>
@@ -582,12 +656,12 @@ export function Session({ focusLessonId, onAgain }: { focusLessonId?: string; on
         <div class="dialog-backdrop" onClick={() => setLeaving(false)}>
           <div class="dialog" role="dialog" aria-modal="true" onClick={(e) => e.stopPropagation()}>
             <h2>Leave this session?</h2>
-            <p>Your answers so far are saved. The streak only counts once a session is finished.</p>
+            <p>Your answers so far will be saved. The streak only counts once a session is finished.</p>
             <div class="dialog-actions">
               <Button
                 kind="ghost"
                 onClick={() => {
-                  commit();
+                  flush();
                   navigate({ name: 'today' });
                 }}
               >

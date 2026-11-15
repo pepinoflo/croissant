@@ -99,8 +99,8 @@ function Row({ item }: { item: StudyItem }) {
       </li>
     );
   }
-  if (item.type === 'sentence' || item.type === 'transform' || item.type === 'question') {
-    const fr = item.type === 'question' ? item.fr : canonical(item.fr);
+  if (item.type === 'sentence' || item.type === 'transform' || item.type === 'question' || item.type === 'writing') {
+    const fr = item.type === 'question' || item.type === 'writing' ? item.fr : canonical(item.fr);
     return (
       <li class="row">
         {dot}
@@ -112,7 +112,7 @@ function Row({ item }: { item: StudyItem }) {
           )}
           <Fr>{fr}</Fr>
           <span class="row-en">{item.en}</span>
-          {item.type === 'question' && (
+          {(item.type === 'question' || item.type === 'writing') && (
             <span class="row-model">
               e.g. <span lang="fr">{pretty(item.models[0])}</span>
             </span>

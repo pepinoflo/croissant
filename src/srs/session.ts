@@ -53,6 +53,9 @@ export const SIZES: Record<SessionSize, { questions: number; reviews: number; fr
 
 export const MATCH_SIZE = 4;
 
+/** Writing a text takes a few minutes: at most this many per session, new or review. */
+export const MAX_WRITING = 1;
+
 export function shuffle<T>(list: T[], rng: Rng): T[] {
   const a = [...list];
   for (let i = a.length - 1; i > 0; i--) {
@@ -140,16 +143,23 @@ export function planSession(opts: PlanOptions): Plan {
   const focus = opts.focusLessonId;
   const inScope = (item: StudyItem) => !focus || catalog.lessonOf.get(item.id)!.id === focus;
 
+  let writingLeft = MAX_WRITING;
+  const fits = (item: StudyItem) => item.type !== 'writing' || writingLeft-- > 0;
+
   const seen = catalog.study.filter((i) => inScope(i) && isSeen(cards.get(i.id)));
   const due = seen
     .filter((i) => isDue(cards.get(i.id)!, now))
     .sort((a, b) => overdueDays(cards.get(b.id)!, now) - overdueDays(cards.get(a.id)!, now));
 
-  let reviews = due.slice(0, cap);
+  let reviews: StudyItem[] = [];
+  for (const item of due) {
+    if (reviews.length >= cap) break;
+    if (fits(item)) reviews.push(item);
+  }
   let mode: Plan['mode'] = focus ? 'lesson' : 'daily';
 
   const dueTotal = focus ? reviews.length : due.length;
-  const fresh = pickNew(catalog, cards, newAllowance(size, dueTotal, opts.recentAccuracy), focus);
+  const fresh = pickNew(catalog, cards, newAllowance(size, dueTotal, opts.recentAccuracy), focus).filter(fits);
 
   // Nothing due and nothing new (or practising one lesson with room to spare):
   // top up with the items most likely to have faded.
@@ -157,7 +167,7 @@ export function planSession(opts: PlanOptions): Plan {
     if (!focus) mode = 'extra';
     const chosen = new Set(reviews.map((i) => i.id));
     const weakest = seen
-      .filter((i) => !chosen.has(i.id))
+      .filter((i) => !chosen.has(i.id) && i.type !== 'writing')
       .sort((a, b) => retrievability(cards.get(a.id)!, now) - retrievability(cards.get(b.id)!, now));
     reviews = reviews.concat(weakest.slice(0, cap - reviews.length));
   }

@@ -1,9 +1,9 @@
 {
   "schema": 1,
-  "id": "l08-planifier-un-voyage",
-  "order": 8,
-  "title": "Où on avait l'habitude d'aller",
-  "titleEn": "Planning a trip, and trips you used to take",
+  "id": "l08-preparer-un-voyage",
+  "order": 6,
+  "title": "Préparer un voyage",
+  "titleEn": "Booking, getting there, and the trips you used to take",
   "emoji": "🗺️",
   "summary": "Preparing a trip from booking to arriving, what you do once you are there, and talking about where you used to go.",
   "items": [
@@ -77,6 +77,8 @@
     { "id": "l08.t.pc-arriver-destination", "type": "transform", "group": "Transformer", "task": "Mets la phrase au passé composé.", "taskEn": "Put the sentence in the passé composé.", "from": "Elle arrive à destination.", "fr": "Elle est arrivée à destination.", "en": "She arrived at her destination.", "traps": ["a", "arrivé"], "note": "arriver takes être: elle est arrivée." },
     { "id": "l08.q.vacances-quand-tu-etais-petite", "type": "question", "group": "À toi de répondre", "fr": "Qu'est-ce que tu faisais pendant les vacances quand tu étais petite ?", "en": "What did you use to do on holiday when you were little?", "hint": "imparfait: on allait…, je faisais…", "models": ["Quand j'étais petite, on allait à la plage et je nageais tous les jours.", "On faisait du ski en hiver et on allait à la campagne en été."] },
     { "id": "l08.q.comment-tu-prepares-un-voyage", "type": "question", "group": "À toi de répondre", "fr": "Comment est-ce que tu prépares un voyage ?", "en": "How do you get ready for a trip?", "hint": "D'abord…, puis…, la veille…", "models": ["D'abord, je choisis une destination. Puis je réserve un hôtel et j'achète les billets.", "Je fais ma valise la veille, et je n'oublie jamais mon chargeur."] },
-    { "id": "l08.q.nouvelle-ville", "type": "question", "group": "À toi de répondre", "fr": "Qu'est-ce que tu fais quand tu arrives dans une nouvelle ville ?", "en": "What do you do when you arrive in a new city?", "hint": "Une fois arrivée…, je…", "models": ["Une fois arrivée, je me repose un peu, puis je me balade dans la ville.", "Je découvre la ville à pied et je prends beaucoup de photos."] }
+    { "id": "l08.q.nouvelle-ville", "type": "question", "group": "À toi de répondre", "fr": "Qu'est-ce que tu fais quand tu arrives dans une nouvelle ville ?", "en": "What do you do when you arrive in a new city?", "hint": "Une fois arrivée…, je…", "models": ["Une fois arrivée, je me repose un peu, puis je me balade dans la ville.", "Je découvre la ville à pied et je prends beaucoup de photos."] },
+    { "id": "l08.w.mon-dernier-voyage", "type": "writing", "group": "À toi d'écrire", "fr": "Écris un message à une amie : comment est-ce que tu as préparé ton dernier voyage, et qu'est-ce que tu as fait sur place ?", "en": "Write a message to a friend: how did you prepare your last trip, and what did you do once you were there?", "points": ["what you booked: j'ai réservé un hôtel, un billet de train", "the transport you took", "two or three things you did there"], "minWords": 45, "models": ["Salut Sophie ! Pour mon dernier voyage, j'ai tout préparé un mois avant. D'abord, j'ai réservé un billet de train sur Internet, puis j'ai trouvé un petit hôtel dans le centre-ville. J'ai aussi acheté un guide et j'ai fait ma valise la veille. Sur place, j'ai visité les musées à pied et j'ai pris le bus pour aller à la plage. C'était super ! Bises"] },
+    { "id": "l08.w.vacances-d-enfance", "type": "writing", "group": "À toi d'écrire", "fr": "Raconte où tu avais l'habitude d'aller en vacances quand tu étais petite, et ce que tu faisais là-bas.", "en": "Describe where you used to go on holiday as a child, and what you used to do there.", "points": ["the imparfait: on allait, on faisait, j'aimais", "avoir l'habitude de + infinitive", "quand j'étais petite…"], "minWords": 40, "models": ["Quand j'étais petite, on avait l'habitude d'aller à la montagne chez mes grands-parents. On partait en voiture au début de l'été. Là-bas, je jouais dehors toute la journée avec mes cousins. Le matin, on allait chercher le pain au village, et l'après-midi, on se baignait dans le lac. Le soir, ma grand-mère préparait toujours une bonne soupe. J'adorais ces vacances !"] }
   ]
 }

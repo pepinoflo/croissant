@@ -23,6 +23,7 @@ import {
   type StudyItem,
   type TransformItem,
   type VocabItem,
+  type WritingItem,
 } from '../content/types';
 import { fold, normalize } from '../srs/grading';
 import type { CardState } from '../srs/scheduler';
@@ -144,17 +145,18 @@ export function variantsFor(item: StudyItem, level: number, ctx: GenContext): We
   } else if (item.type === 'sentence') {
     const words = tileCount(item.fr);
     const tiles = words >= 3 && words <= 16;
+    // Written from scratch more often than built from tiles, but both stay at every level.
     if (level === 0) {
-      out.push(['sent:say', 1]);
-      out.push(tiles ? ['sent:bank', 4] : ['sent:type', 4]);
+      out.push(['sent:say', 1], ['sent:type', 2]);
+      if (tiles) out.push(['sent:bank', 4]);
     } else if (level === 1) {
-      out.push(['sent:type', 4], ['sent:say', 2]);
-      if (tiles) out.push(['sent:bank', 2]);
+      out.push(['sent:type', 5], ['sent:say', 2]);
+      if (tiles) out.push(['sent:bank', 3]);
       if (speak) out.push(['sent:dictation', 1]);
     } else {
       out.push(['sent:type', 5], ['sent:say', 2]);
-      if (tiles) out.push(['sent:bank', 1]);
-      if (speak && words <= 12) out.push(['sent:dictation', 2]);
+      if (tiles) out.push(['sent:bank', 2]);
+      if (speak && words <= 12) out.push(['sent:dictation', 1]);
     }
   } else if (item.type === 'transform') {
     const tiles = tileCount(item.fr) >= 3 && tileCount(item.fr) <= 16;
@@ -163,9 +165,11 @@ export function variantsFor(item: StudyItem, level: number, ctx: GenContext): We
       out.push(['trans:type', 4]);
       if (tiles) out.push(['trans:bank', 1]);
     }
-  } else {
+  } else if (item.type === 'question') {
     out.push(['q:write', 3]);
     if (speak && level > 0) out.push(['q:listen', 2]);
+  } else {
+    out.push(['w:write', 1]);
   }
   return out;
 }
@@ -718,7 +722,25 @@ function buildQuestion(item: QuestionItem, variant: string): OpenExercise {
       ? { instruction: 'Listen, then answer in French', speak: item.fr, audioOnly: true, sub: item.hint }
       : { instruction: 'Answer in a full sentence', text: item.fr, lang: 'fr', speak: item.fr, sub: item.hint },
     models: item.models,
+    task: { fr: item.fr, en: item.en },
     answer: { fr: item.fr, en: item.en, note: item.note },
+  };
+}
+
+function buildWriting(item: WritingItem, variant: string): OpenExercise {
+  return {
+    kind: 'open',
+    itemId: item.id,
+    variant,
+    xpKind: 'writing',
+    production: true,
+    prompt: { instruction: 'Write in French', text: item.fr, lang: 'fr', sub: item.en },
+    models: item.models,
+    long: true,
+    points: item.points,
+    minWords: item.minWords,
+    task: { fr: item.fr, en: item.en },
+    answer: { fr: item.models[0], en: item.en, note: item.note },
   };
 }
 
@@ -728,6 +750,7 @@ export function buildExercise(item: StudyItem, variant: string, ctx: GenContext,
   if (item.type === 'cloze') return buildCloze(item, variant, ctx);
   if (item.type === 'sentence' || item.type === 'transform') return buildSentence(item, variant, level, ctx);
   if (item.type === 'question') return buildQuestion(item, variant);
+  if (item.type === 'writing') return buildWriting(item, variant);
   return buildWord(item, variant, ctx);
 }
 

@@ -18,7 +18,7 @@ export const LOCK_FILE = join(LESSONS_DIR, 'ids.lock.json');
 const SCHEMA_FILE = join(LESSONS_DIR, 'schema', 'lesson.v1.schema.json');
 const PUBLIC_DIR = join(ROOT, 'public');
 
-const TYPE_LETTER = { vocab: 'v', phrase: 'p', conjugation: 'c', cloze: 'x', sentence: 's', transform: 't', question: 'q', grammar: 'g' };
+const TYPE_LETTER = { vocab: 'v', phrase: 'p', conjugation: 'c', cloze: 'x', sentence: 's', transform: 't', question: 'q', writing: 'w', grammar: 'g' };
 const CLOZE = /\{\{(.+?)\}\}/;
 
 const norm = (s) =>
@@ -74,6 +74,7 @@ export function validateLessons(entries, lock = { ids: [], retired: [] }, opts =
 
   const allIds = new Map();
   const orders = new Map();
+  const numbers = new Map();
   const grammarIds = new Set();
   const grammarRefs = [];
 
@@ -92,8 +93,11 @@ export function validateLessons(entries, lock = { ids: [], retired: [] }, opts =
     }
 
     if (`${lesson.id}.json` !== file) at(`id "${lesson.id}" does not match the file name`);
+    // The number in the id (l04) is permanent: every item id starts with it. The
+    // order is only the position in the course, so lessons can be moved around.
     const num = lesson.id.slice(1, 3);
-    if (Number(num) !== lesson.order) at(`order ${lesson.order} does not match the number in the id (${num})`);
+    if (numbers.has(num)) at(`lesson number ${num} is already used by ${numbers.get(num)}`);
+    numbers.set(num, file);
     if (orders.has(lesson.order)) at(`order ${lesson.order} is already used by ${orders.get(lesson.order)}`);
     orders.set(lesson.order, file);
 
@@ -151,6 +155,13 @@ export function validateLessons(entries, lock = { ids: [], retired: [] }, opts =
         if (item.models.length < 2) err('give at least two model answers');
       }
 
+      if (item.type === 'writing') {
+        if (item.models.length > 3) err('give one to three model texts');
+        if (item.minWords && item.models.some((m) => m.split(/\s+/).length < item.minWords * 0.8)) {
+          err(`a model text is much shorter than the ${item.minWords} words asked for`);
+        }
+      }
+
       if (item.type === 'cloze') {
         const m = CLOZE.exec(item.fr);
         const answers = [m[1], ...(item.accept ?? [])].map(norm);
@@ -178,6 +189,9 @@ export function validateLessons(entries, lock = { ids: [], retired: [] }, opts =
       if (item.grammar) grammarRefs.push({ file, id: item.id, ref: item.grammar });
     }
   }
+
+  const sorted = [...orders.keys()].sort((a, b) => a - b);
+  if (sorted.some((o, i) => o !== i + 1)) errors.push(`lesson orders must run 1, 2, 3… without gaps (found ${sorted.join(', ')})`);
 
   for (const { file, id, ref } of grammarRefs) {
     if (!grammarIds.has(ref)) errors.push(`${file}: ${id}: "grammar" points to "${ref}", which is not a grammar card`);

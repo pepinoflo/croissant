@@ -124,6 +124,26 @@ export interface QuestionItem extends BaseItem {
   grammar?: string;
 }
 
+/**
+ * A short text to write on the lesson's theme: a message, a letter, a little
+ * story. Corrected by the writing tutor when one is set up, otherwise compared
+ * with the model answers.
+ */
+export interface WritingItem extends BaseItem {
+  type: 'writing';
+  /** The task in French, e.g. "Écris un message à une amie pour l'inviter au cinéma." */
+  fr: string;
+  /** The task in English. */
+  en: string;
+  /** What the text should contain, in English: "say when and where", "use the futur proche". */
+  points?: string[];
+  /** Roughly how long the text should be. */
+  minWords?: number;
+  /** One to three example texts. */
+  models: string[];
+  grammar?: string;
+}
+
 export interface GrammarItem extends BaseItem {
   type: 'grammar';
   title: string;
@@ -141,6 +161,7 @@ export type Item =
   | SentenceItem
   | TransformItem
   | QuestionItem
+  | WritingItem
   | GrammarItem;
 /** Items that are scheduled for review (everything except grammar reference cards). */
 export type StudyItem = Exclude<Item, GrammarItem>;

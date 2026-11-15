@@ -11,7 +11,7 @@ export function frenchOf(item: StudyItem): string {
   if (item.type === 'phrase') return item.fr;
   if (item.type === 'conjugation') return conjugationTitle(item);
   if (item.type === 'sentence' || item.type === 'transform') return canonical(item.fr);
-  if (item.type === 'question') return item.fr;
+  if (item.type === 'question' || item.type === 'writing') return item.fr;
   return item.fr.replace(/\{\{(.+?)\}\}/, '$1');
 }
 

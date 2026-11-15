@@ -67,6 +67,7 @@ const BASE_XP: Record<string, number> = {
   type: 16,
   write: 22,
   open: 22,
+  writing: 40,
 };
 
 /** For saying "I already know this" about a new item. */

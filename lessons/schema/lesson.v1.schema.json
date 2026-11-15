@@ -13,7 +13,7 @@
       "pattern": "^l[0-9]{2}-[a-z0-9]+(-[a-z0-9]+)*$",
       "description": "Lesson id and file name (without .json), e.g. l05-les-magasins."
     },
-    "order": { "type": "integer", "minimum": 1, "description": "Position in the course; must match the number in the id." },
+    "order": { "type": "integer", "minimum": 1, "description": "Position in the course (1, 2, 3…). Independent of the number in the id, which never changes." },
     "title": { "type": "string", "minLength": 1, "description": "Title in French." },
     "titleEn": { "type": "string", "minLength": 1, "description": "What the lesson covers, in English." },
     "emoji": { "type": "string", "minLength": 1 },
@@ -31,6 +31,7 @@
           { "$ref": "#/definitions/sentence" },
           { "$ref": "#/definitions/transform" },
           { "$ref": "#/definitions/question" },
+          { "$ref": "#/definitions/writing" },
           { "$ref": "#/definitions/grammar" }
         ]
       }
@@ -39,7 +40,7 @@
   "definitions": {
     "id": {
       "type": "string",
-      "pattern": "^l[0-9]{2}\\.[vpcxstqg]\\.[a-z0-9]+(-[a-z0-9]+)*$",
+      "pattern": "^l[0-9]{2}\\.[vpcxstqwg]\\.[a-z0-9]+(-[a-z0-9]+)*$",
       "description": "l<lesson number>.<letter>.<slug> — v vocab, p phrase, c conjugation, x cloze (exercise), s sentence to translate, t transformation, q open question, g grammar."
     },
     "text": { "type": "string", "minLength": 1 },
@@ -232,6 +233,24 @@
         "en": { "$ref": "#/definitions/text" },
         "hint": { "$ref": "#/definitions/text", "description": "How to build the answer, in English." },
         "models": { "$ref": "#/definitions/textList", "description": "Two or three example answers." },
+        "grammar": { "$ref": "#/definitions/id" },
+        "group": { "$ref": "#/definitions/text" },
+        "note": { "$ref": "#/definitions/text" }
+      }
+    },
+    "writing": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "type", "fr", "en", "models"],
+      "description": "A short text to write on the lesson's theme (a message, a letter, a little story). Corrected by the writing tutor when one is set up, otherwise compared with the models.",
+      "properties": {
+        "id": { "$ref": "#/definitions/id" },
+        "type": { "const": "writing" },
+        "fr": { "$ref": "#/definitions/text", "description": "The task in French." },
+        "en": { "$ref": "#/definitions/text", "description": "The task in English." },
+        "points": { "$ref": "#/definitions/textList", "description": "What the text should contain, in English." },
+        "minWords": { "type": "integer", "minimum": 5, "maximum": 300, "description": "Roughly how many words to write." },
+        "models": { "$ref": "#/definitions/textList", "description": "One to three example texts." },
         "grammar": { "$ref": "#/definitions/id" },
         "group": { "$ref": "#/definitions/text" },
         "note": { "$ref": "#/definitions/text" }

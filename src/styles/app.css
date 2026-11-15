@@ -407,6 +407,9 @@ h2 {
 .icon-btn:active {
   background: var(--track);
 }
+.icon-btn:disabled {
+  opacity: 0.25;
+}
 .button-row {
   display: flex;
   flex-wrap: wrap;
@@ -2073,4 +2076,135 @@ textarea.type-input-long {
 .row-model {
   font-size: 14.5px;
   color: var(--ink-soft);
+}
+
+/* Automatic backup */
+.text-bad {
+  color: var(--bad);
+}
+.token-row {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  margin: 12px 0 4px;
+}
+.token-row .type-input {
+  flex: 1;
+  min-width: 0;
+  font-size: 1rem;
+}
+
+/* Writing, dictation and the tutor */
+.type-tools {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+.dictate {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 6px;
+}
+.dictate-btn.is-listening {
+  background: var(--bad-soft);
+  color: var(--bad-deep);
+  animation: pulse 1.2s ease-in-out infinite;
+}
+@keyframes pulse {
+  50% {
+    opacity: 0.6;
+  }
+}
+.type-input-letter {
+  min-height: 11em;
+  line-height: 1.5;
+}
+.word-count {
+  margin: 0;
+  text-align: right;
+  font-size: 0.9rem;
+  color: var(--ink-soft);
+}
+.word-count.is-enough {
+  color: var(--good-deep);
+  font-weight: 600;
+}
+.points {
+  margin: 0 0 12px;
+  padding-left: 1.3em;
+  list-style: disc;
+  color: var(--ink-soft);
+  line-height: 1.5;
+}
+.tutor {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 14px 0;
+  padding: 18px 20px;
+  border-radius: var(--radius);
+  background: var(--surface);
+  border: 1px solid var(--line);
+}
+.tutor-comment {
+  margin: 0;
+  font-weight: 600;
+}
+.tutor-comment .icon,
+.tutor-wait .icon {
+  color: var(--accent-deep);
+  vertical-align: -4px;
+}
+.tutor-text {
+  margin: 0;
+  font-size: 1.1rem;
+  line-height: 1.6;
+}
+.tutor-mistakes {
+  margin: 0;
+  padding-left: 1.2em;
+  line-height: 1.6;
+}
+.tutor-wrong {
+  color: var(--bad-deep);
+  text-decoration: line-through;
+}
+.tutor-right {
+  color: var(--good-deep);
+  font-weight: 600;
+}
+.tutor-ok {
+  margin: 0;
+  color: var(--good-deep);
+  font-weight: 600;
+}
+.tutor-natural {
+  margin: 0;
+}
+.tutor-wait {
+  text-align: center;
+  color: var(--ink-soft);
+  animation: pulse 1.2s ease-in-out infinite;
+}
+details.models > summary {
+  cursor: pointer;
+  list-style-position: inside;
+}
+.heard {
+  margin: 0;
+  text-align: center;
+}
+.model-input {
+  max-width: 18em;
+  font-family: var(--body);
+  font-size: 0.95rem;
+}
+.token-row .type-input {
+  font-family: var(--body);
+}
+.models li .fr {
+  white-space: pre-line;
 }
