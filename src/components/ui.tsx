@@ -29,6 +29,7 @@ const ICONS: Record<string, string> = {
   sparkle: 'M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8zM19 16l.7 1.8 1.8.7-1.8.7L19 21l-.7-1.8-1.8-.7 1.8-.7z',
   cloud: 'M7 18.5h10a4 4 0 0 0 .5-8 5.5 5.5 0 0 0-10.6-1.3A4.6 4.6 0 0 0 7 18.5z',
   pen: 'M4 20h4L19 9l-4-4L4 16zm9-13 4 4',
+  play: 'M8 5.5v13l10.5-6.5z',
 };
 
 export function Icon({ name, size = 24 }: { name: string; size?: number }) {

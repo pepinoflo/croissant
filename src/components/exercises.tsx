@@ -18,6 +18,7 @@ import { sfx } from '../speech/sfx';
 import { canSpeak, speak, stopSpeaking } from '../speech/tts';
 import { correctText, type TutorReply } from '../ai/tutor';
 import { appendText, canDictate, startDictation, type Dictation } from '../speech/dictation';
+import { canRecord, RecordError, startRecording, type Recording } from '../speech/recorder';
 import { secrets, settings } from '../state/store';
 import { checkAnswer, diffWords, type Verdict } from '../srs/grading';
 import type { Grade } from '../srs/scheduler';
@@ -287,9 +288,102 @@ export function UnscrambleView({ ex, locked, onAnswer }: ViewProps<UnscrambleExe
   );
 }
 
+/**
+ * Record yourself, hear it straight back, compare with the French voice, and
+ * try again as often as you like. Hidden where the browser cannot record.
+ */
+export function Recorder({ compare }: { compare?: string }) {
+  const [state, setState] = useState<'idle' | 'starting' | 'recording' | 'ready'>('idle');
+  const [url, setUrl] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [seconds, setSeconds] = useState(0);
+  const rec = useRef<Recording | null>(null);
+  const audio = useRef<HTMLAudioElement | null>(null);
+  const urlRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    if (state !== 'recording') return;
+    setSeconds(0);
+    const t = setInterval(() => setSeconds((s) => s + 1), 1000);
+    return () => clearInterval(t);
+  }, [state]);
+
+  useEffect(
+    () => () => {
+      rec.current?.cancel();
+      audio.current?.pause();
+      if (urlRef.current) URL.revokeObjectURL(urlRef.current);
+    },
+    [],
+  );
+
+  if (!canRecord()) return null;
+
+  const play = () => {
+    if (!audio.current || !urlRef.current) return;
+    stopSpeaking();
+    audio.current.currentTime = 0;
+    audio.current.play().catch(() => undefined);
+  };
+
+  const start = async () => {
+    setError(null);
+    stopSpeaking();
+    audio.current?.pause();
+    setState('starting');
+    try {
+      rec.current = await startRecording();
+      setState('recording');
+    } catch (err) {
+      setError(err instanceof RecordError ? err.message : 'The microphone could not be started.');
+      setState(urlRef.current ? 'ready' : 'idle');
+    }
+  };
+
+  const stop = async () => {
+    const r = rec.current;
+    if (!r) return;
+    rec.current = null;
+    // Created during the tap, so the iPad lets it play once the recording is ready.
+    const el = audio.current ?? new Audio();
+    audio.current = el;
+    const next = await r.stop();
+    if (urlRef.current) URL.revokeObjectURL(urlRef.current);
+    urlRef.current = next;
+    setUrl(next);
+    el.src = next;
+    setState('ready');
+    play();
+  };
+
+  return (
+    <div class="recorder">
+      {state === 'recording' ? (
+        <Button kind="bad" onClick={() => void stop()}>
+          <span class="rec-dot" /> Stop · {seconds}s
+        </Button>
+      ) : (
+        <Button kind={url ? 'ghost' : 'secondary'} disabled={state === 'starting'} onClick={() => void start()}>
+          <Icon name="mic" size={20} /> {url ? 'Record again' : 'Record yourself'}
+        </Button>
+      )}
+      {url && state !== 'recording' && (
+        <Button kind="secondary" onClick={play}>
+          <Icon name="play" size={20} /> Listen to yourself
+        </Button>
+      )}
+      {url && compare && canSpeak.value && state !== 'recording' && (
+        <Button kind="secondary" onClick={() => speak(compare)}>
+          <Icon name="speaker" size={20} /> French voice
+        </Button>
+      )}
+      {error && <p class="quiet small recorder-error">{error}</p>}
+    </div>
+  );
+}
+
 export function FlashcardView({ ex, locked, onAnswer }: ViewProps<FlashcardExercise>) {
   const [shown, setShown] = useState(false);
-  const [heard, setHeard] = useState('');
   const said = ex.xpKind === 'say';
   const reveal = () => {
     setShown(true);
@@ -300,13 +394,8 @@ export function FlashcardView({ ex, locked, onAnswer }: ViewProps<FlashcardExerc
       <PromptView prompt={ex.prompt} />
       {!shown ? (
         <div class={`flash-actions ${said ? 'flash-actions-say' : ''}`}>
-          {said && <p class="say-cue">Say the whole sentence aloud, then check.</p>}
-          {said && <DictateButton onText={(t) => setHeard((v) => appendText(v, t))} />}
-          {heard && (
-            <p class="heard">
-              <span class="sheet-hint">You said:</span> <span lang="fr">{heard}</span>
-            </p>
-          )}
+          {said && <p class="say-cue">Say the whole sentence aloud — record yourself if you like — then check.</p>}
+          {said && <Recorder />}
           <Button onClick={reveal} wide>
             {said ? 'I said it — show me' : 'Show the answer'}
           </Button>
@@ -320,20 +409,11 @@ export function FlashcardView({ ex, locked, onAnswer }: ViewProps<FlashcardExerc
               {ex.back.lang === 'fr' && <SpeakButton text={ex.back.text} />}
             </div>
             {ex.answer.note && <p class="note">{ex.answer.note}</p>}
-            {heard && (
-              <p class="heard">
-                <span class="sheet-hint">You said:</span>{' '}
-                <span class="fr diff" lang="fr">
-                  {diffWords(ex.back.text, heard).map((p, i) => (
-                    <>
-                      {i > 0 && ' '}
-                      <span key={i} class={p.ok ? '' : 'diff-miss'}>
-                        {p.word}
-                      </span>
-                    </>
-                  ))}
-                </span>
-              </p>
+            {said && (
+              <>
+                <p class="quiet small">Record yourself saying it, listen, compare with the French voice, and try again.</p>
+                <Recorder compare={ex.back.text} />
+              </>
             )}
           </div>
           {!locked && (
@@ -525,6 +605,7 @@ export function OpenView({ ex, locked, onAnswer }: ViewProps<OpenExercise>) {
             {ex.minWords ? ` · about ${ex.minWords} asked` : ''}
           </p>
         )}
+        {!ex.long && <Recorder />}
         {!shown && (
           <>
             <div class="type-tools">
