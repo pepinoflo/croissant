@@ -2208,3 +2208,23 @@ details.models > summary {
 .models li .fr {
   white-space: pre-line;
 }
+
+/* Record yourself */
+.recorder {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 10px;
+}
+.recorder-error {
+  flex-basis: 100%;
+  margin: 0;
+  text-align: center;
+}
+.rec-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: #fff;
+  animation: pulse 1s ease-in-out infinite;
+}
