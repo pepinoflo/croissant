@@ -254,7 +254,7 @@ export function withNewItem(steps: Step[], index: number, item: StudyItem): Step
     return next;
   }
   next.splice(index + 1, 0, { kind: 'intro', itemId: item.id, isNew: true });
-  next.splice(Math.min(index + RETRY_GAP + 1, next.length), 0, quiz);
+  next.splice(Math.min(index + INTRO_GAP + 1, next.length), 0, quiz);
   return next;
 }
 
@@ -263,12 +263,16 @@ export function withoutQuiz(steps: Step[], index: number, itemId: string): Step[
   return steps.filter((s, i) => !(i > index && s.kind === 'quiz' && s.itemId === itemId));
 }
 
-export const RETRY_GAP = 4;
+/** Steps between a new item's introduction and its first question. */
+export const INTRO_GAP = 4;
+/** Steps before a missed item comes back: far enough that it is no longer in short-term memory. */
+export const RETRY_GAP = 12;
 export const MAX_RETRIES = 2;
 
 /**
- * After a wrong answer, the same item is asked again a few steps later
- * (at most twice per session). Returns the new list of steps.
+ * After a wrong answer, the same item is asked again much later in the
+ * session, or at its very end when less than that is left (at most twice
+ * per session). Returns the new list of steps.
  */
 export function withRetry(steps: Step[], index: number): Step[] {
   const step = steps[index];
