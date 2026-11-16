@@ -17,7 +17,6 @@ import type {
 import { sfx } from '../speech/sfx';
 import { canSpeak, speak, stopSpeaking } from '../speech/tts';
 import { correctText, type TutorReply } from '../ai/tutor';
-import { appendText, canDictate, startDictation, type Dictation } from '../speech/dictation';
 import { canRecord, RecordError, startRecording, type Recording } from '../speech/recorder';
 import { secrets, settings } from '../state/store';
 import { checkAnswer, diffWords, type Verdict } from '../srs/grading';
@@ -171,7 +170,7 @@ export function TypeView({ ex, locked, onAnswer }: ViewProps<TypeExercise>) {
     value,
     readOnly: locked,
     onInput: (e: Event) => setValue((e.target as HTMLInputElement).value),
-    placeholder: ex.sentence ? 'Écris la phrase en français, ou dicte-la avec 🎤…' : 'Écris en français…',
+    placeholder: ex.sentence ? 'Écris la phrase en français…' : 'Écris en français…',
     autocomplete: 'off',
     autocorrect: 'off',
     autocapitalize: ex.sentence ? 'sentences' : 'off',
@@ -207,10 +206,7 @@ export function TypeView({ ex, locked, onAnswer }: ViewProps<TypeExercise>) {
         )}
         {!locked && (
           <>
-            <div class="type-tools">
-              <AccentBar onInsert={insert} />
-              {ex.sentence && !ex.prompt.audioOnly && <DictateButton onText={(t) => setValue((v) => appendText(v, t))} />}
-            </div>
+            <AccentBar onInsert={insert} />
             <div class="type-actions">
               <Button kind="ghost" onClick={() => submit('')}>
                 Je ne sais pas
@@ -250,8 +246,8 @@ export function UnscrambleView({ ex, locked, onAnswer }: ViewProps<UnscrambleExe
             class="tile"
             disabled={locked}
             onClick={() => {
+              setPlaced((now) => now.filter((p) => p !== i));
               sfx.tap();
-              setPlaced(placed.filter((p) => p !== i));
             }}
           >
             {pretty(ex.tiles[i])}
@@ -266,8 +262,8 @@ export function UnscrambleView({ ex, locked, onAnswer }: ViewProps<UnscrambleExe
             class={`tile ${used.has(i) ? 'tile-used' : ''}`}
             disabled={locked || used.has(i)}
             onClick={() => {
+              setPlaced((now) => (now.includes(i) ? now : [...now, i]));
               sfx.tap();
-              setPlaced([...placed, i]);
             }}
           >
             {pretty(t)}
@@ -276,9 +272,16 @@ export function UnscrambleView({ ex, locked, onAnswer }: ViewProps<UnscrambleExe
       </div>
       {!locked && (
         <div class="type-actions">
-          <Button kind="ghost" onClick={() => setPlaced([])} disabled={!placed.length}>
-            Effacer
-          </Button>
+          {placed.length ? (
+            <Button kind="ghost" onClick={() => setPlaced([])}>
+              Effacer
+            </Button>
+          ) : (
+            // Always a way forward, whatever happens with the tiles.
+            <Button kind="ghost" onClick={check}>
+              Je ne sais pas
+            </Button>
+          )}
           <Button onClick={check} disabled={ex.traps ? placed.length < 2 : placed.length !== ex.tiles.length}>
             Vérifier
           </Button>
@@ -438,44 +441,6 @@ export function FlashcardView({ ex, locked, onAnswer }: ViewProps<FlashcardExerc
   );
 }
 
-/** A microphone button that types what she says, in French. Hidden where the browser cannot do it. */
-export function DictateButton({ onText, disabled }: { onText: (text: string) => void; disabled?: boolean }) {
-  const [listening, setListening] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const session = useRef<Dictation | null>(null);
-  useEffect(() => () => session.current?.stop(), []);
-  if (!canDictate()) return null;
-  const toggle = () => {
-    if (session.current) {
-      session.current.stop();
-      return;
-    }
-    setError(null);
-    stopSpeaking();
-    session.current = startDictation(onText, (err) => {
-      session.current = null;
-      setListening(false);
-      if (err) setError(err);
-    });
-    setListening(!!session.current);
-    if (!session.current) setError('Voice input is not available here. Use the microphone key on the keyboard instead.');
-  };
-  return (
-    <span class="dictate">
-      <button
-        type="button"
-        class={`btn btn-secondary dictate-btn ${listening ? 'is-listening' : ''}`}
-        disabled={disabled}
-        onClick={toggle}
-        aria-pressed={listening}
-      >
-        <Icon name="mic" size={20} /> {listening ? 'Stop' : 'Parler'}
-      </button>
-      {error && <span class="quiet small">{error}</span>}
-    </span>
-  );
-}
-
 const wordsIn = (s: string): number => (s.trim() ? s.trim().split(/\s+/).length : 0);
 
 /** What the tutor would grade it, as one of the three self-rating buttons. */
@@ -593,7 +558,7 @@ export function OpenView({ ex, locked, onAnswer }: ViewProps<OpenExercise>) {
           value={value}
           readOnly={shown}
           onInput={(e) => setValue((e.target as HTMLTextAreaElement).value)}
-          placeholder={ex.long ? 'Écris ton texte ici… (or tap 🎤 on the keyboard to speak)' : 'Write your answer, or tap 🎤 on the keyboard to say it…'}
+          placeholder={ex.long ? 'Écris ton texte ici…' : 'Écris ta réponse en français…'}
           autocomplete="off"
           autocapitalize="sentences"
           spellcheck={false}
@@ -608,10 +573,7 @@ export function OpenView({ ex, locked, onAnswer }: ViewProps<OpenExercise>) {
         {!ex.long && <Recorder />}
         {!shown && (
           <>
-            <div class="type-tools">
-              <AccentBar onInsert={insert} />
-              <DictateButton onText={(t) => setValue((v) => appendText(v, t))} />
-            </div>
+            <AccentBar onInsert={insert} />
             <div class="type-actions">
               {key && value.trim() ? (
                 <>

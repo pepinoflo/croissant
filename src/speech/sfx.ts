@@ -23,6 +23,16 @@ export function unlockSound(): void {
 function tone(freq: number, start: number, length: number, volume = 0.12, type: OscillatorType = 'sine'): void {
   const a = audio();
   if (!a) return;
+  // A sound must never get in the way of a tap: the iPad can refuse audio
+  // for a while after the microphone or another app has used it.
+  try {
+    play(a, freq, start, length, volume, type);
+  } catch {
+    /* silent */
+  }
+}
+
+function play(a: AudioContext, freq: number, start: number, length: number, volume: number, type: OscillatorType): void {
   const osc = a.createOscillator();
   const gain = a.createGain();
   const t = a.currentTime + start;

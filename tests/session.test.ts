@@ -15,6 +15,7 @@ import {
   withRetry,
   MATCH_SIZE,
   MAX_RETRIES,
+  RETRY_GAP,
   SIZES,
   type Step,
 } from '../src/srs/session';
@@ -261,17 +262,18 @@ describe('skipping a new item as already known', () => {
 });
 
 describe('withRetry', () => {
-  const steps: Step[] = Array.from({ length: 8 }, (_, i) => ({ kind: 'quiz', itemId: `i${i}`, isNew: false }));
+  const steps: Step[] = Array.from({ length: 30 }, (_, i) => ({ kind: 'quiz', itemId: `i${i}`, isNew: false }));
 
-  it('asks a missed item again a few steps later', () => {
+  it('asks a missed item again much later in the session', () => {
     const next = withRetry(steps, 1);
-    expect(next).toHaveLength(9);
-    expect(next[5]).toEqual({ kind: 'quiz', itemId: 'i1', isNew: false, retry: true });
+    expect(next).toHaveLength(31);
+    expect(next[1 + RETRY_GAP]).toEqual({ kind: 'quiz', itemId: 'i1', isNew: false, retry: true });
+    expect(RETRY_GAP).toBeGreaterThanOrEqual(10);
   });
 
   it('puts the retry at the end when the session is nearly over', () => {
-    const next = withRetry(steps, 7);
-    expect(next[next.length - 1]).toMatchObject({ itemId: 'i7', retry: true });
+    const next = withRetry(steps, 25);
+    expect(next[next.length - 1]).toMatchObject({ itemId: 'i25', retry: true });
   });
 
   it('gives up after a couple of retries', () => {

@@ -27,6 +27,18 @@ viewport?.addEventListener('resize', syncViewport);
 viewport?.addEventListener('scroll', syncViewport);
 syncViewport();
 
+// When the keyboard closes, iOS can leave the page shifted by a few points
+// without showing it: taps then land beside what is on screen, and small
+// buttons (a two-letter word tile) cannot be hit at all. Put the page back.
+document.addEventListener('focusout', () => {
+  setTimeout(() => {
+    const el = document.activeElement;
+    if (el instanceof HTMLInputElement || el instanceof HTMLTextAreaElement) return;
+    window.scrollTo(0, 0);
+    syncViewport();
+  }, 60);
+});
+
 // iOS only allows sound and speech once a touch has started them.
 window.addEventListener(
   'pointerdown',

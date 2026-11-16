@@ -1027,6 +1027,7 @@ img.picture {
 }
 .accent-key {
   flex: 1 1 40px;
+  min-width: 36px;
   max-width: 52px;
   height: 48px;
   border-radius: 13px;
@@ -1074,10 +1075,14 @@ img.picture {
   display: flex;
   flex-wrap: wrap;
   justify-content: center;
-  gap: 10px;
+  gap: 12px;
 }
 .tile {
+  /* Short words ("on", "à", "y") still get a full-size target. */
+  min-width: 64px;
+  min-height: 54px;
   padding: 11px 16px;
+  text-align: center;
   border-radius: 14px;
   background: var(--surface);
   box-shadow: 0 3px 0 var(--line-strong), inset 0 0 0 2px var(--line-strong);
@@ -2094,25 +2099,7 @@ textarea.type-input-long {
   font-size: 1rem;
 }
 
-/* Writing, dictation and the tutor */
-.type-tools {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-}
-.dictate {
-  display: inline-flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: 6px;
-}
-.dictate-btn.is-listening {
-  background: var(--bad-soft);
-  color: var(--bad-deep);
-  animation: pulse 1.2s ease-in-out infinite;
-}
+/* Writing and the tutor */
 @keyframes pulse {
   50% {
     opacity: 0.6;
